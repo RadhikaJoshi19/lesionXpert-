@@ -1,5 +1,6 @@
-node_modules/
-dist/
+# Datasets
+dataset/
+mouth_data/
 
 # ML models
 *.keras
@@ -10,9 +11,13 @@ dist/
 *.pkl
 *.joblib
 
-# Dataset archives
+# Archives
 *.zip
 
-# Python cache
+# Dependencies/build
+node_modules/
+dist/
+
+# Python
 __pycache__/
 *.pyc
