@@ -1,0 +1,6 @@
+Class,Code,Precision,Recall,Sensitivity,Specificity,F1,Support
+Normal Oral Tissue,Normal Tissue,0.8696,0.9091,0.9091,0.9623,0.8889,44
+Oral Carcinoma (OCA),Carcinoma,0.625,0.641,0.641,0.9085,0.6329,39
+Oral Leukoplakia,Leukoplakia,0.5,0.4872,0.4872,0.8841,0.4935,39
+Oral Lichen Planus (OLP),Lichen Planus,0.641,0.5319,0.5319,0.9103,0.5814,47
+Oral Submucous Fibrosis (OSMF),Submucous Fibrosis,0.6,0.7059,0.7059,0.9053,0.6486,34

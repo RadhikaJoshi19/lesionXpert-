@@ -1,0 +1,78 @@
+{
+  "dataset": {
+    "path": "mouth_data",
+    "image_size": 224,
+    "channels": 3,
+    "random_seed": 42,
+    "train_split": 0.70,
+    "val_split": 0.15,
+    "test_split": 0.15
+  },
+  "augmentation": {
+    "rotation_range": 15.0,
+    "width_shift_range": 0.08,
+    "height_shift_range": 0.08,
+    "zoom_range": 0.10,
+    "horizontal_flip": true,
+    "vertical_flip": false,
+    "brightness_range": [0.90, 1.10],
+    "fill_mode": "reflect"
+  },
+  "mobilenet": {
+    "architecture": "MobileNetV2",
+    "version": "mobilenetv2_v1",
+    "batch_size": 16,
+    "stage1": {
+      "epochs": 15,
+      "learning_rate": 0.001,
+      "optimizer": "adam",
+      "dropout": 0.30,
+      "dense_units": 256
+    },
+    "stage2_fine_tune": {
+      "enabled": true,
+      "epochs": 12,
+      "learning_rate": 0.00001,
+      "unfreeze_layers_from_end": 35,
+      "patience": 5,
+      "min_lr": 0.000001
+    }
+  },
+  "resnet": {
+    "architecture": "ResNet50",
+    "version": "resnet50_v1",
+    "batch_size": 16,
+    "stage1": {
+      "epochs": 15,
+      "learning_rate": 0.001,
+      "optimizer": "adam",
+      "dropout": 0.35,
+      "dense_units": 256
+    },
+    "stage2_fine_tune": {
+      "enabled": true,
+      "epochs": 12,
+      "learning_rate": 0.00001,
+      "unfreeze_layers_from_end": 25,
+      "patience": 5,
+      "min_lr": 0.000001
+    }
+  },
+  "training_callbacks": {
+    "early_stopping": {
+      "monitor": "val_loss",
+      "patience": 5,
+      "restore_best_weights": true
+    },
+    "reduce_lr": {
+      "monitor": "val_loss",
+      "factor": 0.5,
+      "patience": 3,
+      "min_lr": 0.0000005
+    },
+    "model_checkpoint": {
+      "monitor": "val_loss",
+      "save_best_only": true
+    }
+  }
+}

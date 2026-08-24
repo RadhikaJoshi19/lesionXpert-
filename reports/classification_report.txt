@@ -1,0 +1,14 @@
+LesionXpert AI - Test Set Classification Report
+Model: ResNet50
+
+                                precision    recall  f1-score   support
+
+            Normal Oral Tissue       0.87      0.91      0.89        44
+          Oral Carcinoma (OCA)       0.62      0.64      0.63        39
+              Oral Leukoplakia       0.50      0.49      0.49        39
+      Oral Lichen Planus (OLP)       0.64      0.53      0.58        47
+Oral Submucous Fibrosis (OSMF)       0.60      0.71      0.65        34
+
+                      accuracy                           0.66       203
+                     macro avg       0.65      0.66      0.65       203
+                  weighted avg       0.65      0.66      0.65       203

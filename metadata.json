@@ -1,0 +1,10 @@
+{
+  "name": "LesionXpert AI",
+  "description": "LesionXpert AI - AI-Assisted Oral Lesion Screening and Clinical Decision-Support Platform",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

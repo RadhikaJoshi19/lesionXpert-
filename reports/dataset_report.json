@@ -1,0 +1,72 @@
+{
+  "dataset_directory": "C:\\Users\\radhi\\Downloads\\lesionxpert-ai (1)\\mouth_data\\mouth_data",
+  "total_images": 1348,
+  "classes_required_7": [
+    "Oral Leukoplakia",
+    "Oral Submucous Fibrosis (OSMF)",
+    "Oral Lichen Planus (OLP)",
+    "Erythroplakia",
+    "Actinic Cheilitis",
+    "Chronic Hyperplastic Candidiasis",
+    "Normal Oral Tissue"
+  ],
+  "classes_discovered": [
+    "Normal Oral Tissue",
+    "Oral Carcinoma (OCA)",
+    "Oral Leukoplakia",
+    "Oral Lichen Planus (OLP)",
+    "Oral Submucous Fibrosis (OSMF)"
+  ],
+  "raw_folder_counts": {
+    "Normal": 286,
+    "OCA": 274,
+    "OLK": 253,
+    "OLP": 310,
+    "OSF": 225
+  },
+  "missing_from_7_classes": [
+    "Erythroplakia",
+    "Actinic Cheilitis",
+    "Chronic Hyperplastic Candidiasis"
+  ],
+  "class_counts": {
+    "Normal Oral Tissue": 286,
+    "Oral Carcinoma (OCA)": 274,
+    "Oral Leukoplakia": 253,
+    "Oral Lichen Planus (OLP)": 310,
+    "Oral Submucous Fibrosis (OSMF)": 225
+  },
+  "required_7_counts": {
+    "Oral Leukoplakia": 253,
+    "Oral Submucous Fibrosis (OSMF)": 225,
+    "Oral Lichen Planus (OLP)": 310,
+    "Erythroplakia": 0,
+    "Actinic Cheilitis": 0,
+    "Chronic Hyperplastic Candidiasis": 0,
+    "Normal Oral Tissue": 286
+  },
+  "image_formats": {
+    ".jpg": 1346,
+    ".png": 2
+  },
+  "dimensions_summary": {
+    "4032x3024": 173,
+    "3120x4160": 54,
+    "3024x4032": 48,
+    "3072x4096": 47,
+    "5184x3456": 47,
+    "1120x1494": 45,
+    "4160x3120": 42,
+    "4096x3072": 30,
+    "6720x4480": 26,
+    "960x1280": 23
+  },
+  "corrupted_images_count": 0,
+  "corrupted_images": [],
+  "duplicate_images_count": 29,
+  "duplicate_groups_count": 29,
+  "imbalance_ratio": 1.38,
+  "patient_level_ids_available": false,
+  "unique_patients_detected": 0,
+  "predefined_splits_found": false
+}

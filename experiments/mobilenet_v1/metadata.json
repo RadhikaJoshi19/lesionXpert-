@@ -1,0 +1,33 @@
+{
+  "model_name": "MobileNetV2",
+  "model_version": "mobilenet_v1",
+  "class_names": [
+    "Normal Oral Tissue",
+    "Oral Carcinoma (OCA)",
+    "Oral Leukoplakia",
+    "Oral Lichen Planus (OLP)",
+    "Oral Submucous Fibrosis (OSMF)"
+  ],
+  "num_classes": 5,
+  "image_size": 224,
+  "training_dataset": "mouth_data",
+  "training_date": "2026-08-24T13:42:22.633625",
+  "hyperparameters": {
+    "batch_size": 16,
+    "stage1_lr": 0.001,
+    "stage2_lr": 1e-05,
+    "random_seed": 42
+  },
+  "best_epoch": 9,
+  "validation_metrics": {
+    "val_accuracy": 0.5897,
+    "val_loss": 1.2491
+  },
+  "test_metrics": {
+    "accuracy": 0.5862,
+    "precision": 0.6169,
+    "sensitivity": 0.5862,
+    "specificity": 0.8971,
+    "f1": 0.5927
+  }
+}

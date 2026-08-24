@@ -1,0 +1,22 @@
+{
+  "dataset": "mouth_data\\mouth_data",
+  "total_images": 1348,
+  "classes_discovered": [
+    "Normal Oral Tissue",
+    "Oral Carcinoma (OCA)",
+    "Oral Leukoplakia",
+    "Oral Lichen Planus (OLP)",
+    "Oral Submucous Fibrosis (OSMF)"
+  ],
+  "missing_from_7_class_spec": [
+    "Erythroplakia",
+    "Actinic Cheilitis",
+    "Chronic Hyperplastic Candidiasis"
+  ],
+  "corrupted_images_count": 0,
+  "corrupted_files": [],
+  "duplicate_files_count": 29,
+  "patient_level_tracking_available": false,
+  "imbalance_ratio": 1.38,
+  "quality_status": "VALIDATED"
+}

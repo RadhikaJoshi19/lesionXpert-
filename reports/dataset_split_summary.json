@@ -1,0 +1,51 @@
+{
+  "random_seed": 42,
+  "train_ratio": 0.7,
+  "val_ratio": 0.15,
+  "test_ratio": 0.15,
+  "duplicates_removed": 29,
+  "patient_level_disjoint": false,
+  "total_images": 1319,
+  "train_count": 921,
+  "val_count": 195,
+  "test_count": 203,
+  "classes": [
+    "Normal Oral Tissue",
+    "Oral Carcinoma (OCA)",
+    "Oral Leukoplakia",
+    "Oral Lichen Planus (OLP)",
+    "Oral Submucous Fibrosis (OSMF)"
+  ],
+  "per_class_split": {
+    "Normal Oral Tissue": {
+      "train": 198,
+      "val": 42,
+      "test": 44,
+      "total": 284
+    },
+    "Oral Carcinoma (OCA)": {
+      "train": 179,
+      "val": 38,
+      "test": 39,
+      "total": 256
+    },
+    "Oral Leukoplakia": {
+      "train": 176,
+      "val": 37,
+      "test": 39,
+      "total": 252
+    },
+    "Oral Lichen Planus (OLP)": {
+      "train": 216,
+      "val": 46,
+      "test": 47,
+      "total": 309
+    },
+    "Oral Submucous Fibrosis (OSMF)": {
+      "train": 152,
+      "val": 32,
+      "test": 34,
+      "total": 218
+    }
+  }
+}

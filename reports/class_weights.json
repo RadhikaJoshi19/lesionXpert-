@@ -1,0 +1,23 @@
+{
+  "class_weights": {
+    "0": 0.9303030303030303,
+    "1": 1.029050279329609,
+    "2": 1.0465909090909091,
+    "3": 0.8527777777777777,
+    "4": 1.2118421052631578
+  },
+  "classes": [
+    "Normal Oral Tissue",
+    "Oral Carcinoma (OCA)",
+    "Oral Leukoplakia",
+    "Oral Lichen Planus (OLP)",
+    "Oral Submucous Fibrosis (OSMF)"
+  ],
+  "training_samples_per_class": {
+    "Normal Oral Tissue": 198,
+    "Oral Carcinoma (OCA)": 179,
+    "Oral Leukoplakia": 176,
+    "Oral Lichen Planus (OLP)": 216,
+    "Oral Submucous Fibrosis (OSMF)": 152
+  }
+}
