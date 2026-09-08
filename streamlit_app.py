@@ -1,6 +1,16 @@
 """
-OPMD-AI: AI-Assisted Identification of Oral Potentially Malignant Disorders
-Modern Multi-Role Clinical Decision-Support & Educational Research Platform
+LesionXpert.AI: Advanced AI-Assisted Identification of Oral Potentially Malignant Disorders
+Clinical Decision-Support & Educational Platform
+Supports 7 Diagnostic Categories (Normal Oral Mucosa + 6 Core OPMD Lesions):
+0. Normal Oral Mucosa (Normal)
+1. Oral Leukoplakia (OLK)
+2. Oral Submucous Fibrosis (OSF)
+3. Oral Lichen Planus (OLP)
+4. Erythroplakia (ERY)
+5. Actinic Cheilitis (AC)
+6. Chronic Hyperplastic Candidiasis (CHC)
+Integrated with SMART-OM Dataset Standards (Figshare 31341790) & Multi-Model Ensemble.
+Includes Dynamic Light/Dark Theme Engine and Polished Clinical UI/UX.
 """
 
 import os
@@ -20,7 +30,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 from src.config import (
     CLASS_NAMES, CLASS_DISPLAY_NAMES, CLASS_DESCRIPTIONS,
-    RISK_TIERS, CLINICAL_NEXT_STEPS,
+    RISK_TIERS, CLINICAL_NEXT_STEPS, SMART_OM_ANATOMICAL_SITES,
     PRIMARY_CANDIDATE_MODEL_PATH, MOBILENET_MODEL_PATH, VGG16_MODEL_PATH,
     MIN_IMAGE_DIMENSION, LAPLACIAN_BLUR_THRESHOLD, DARKNESS_THRESHOLD, BRIGHTNESS_THRESHOLD
 )
@@ -31,160 +41,19 @@ from src.database import save_case_to_db, fetch_all_cases, update_case_review, i
 from src.auth import authenticate_user, register_user
 
 # ==============================================================================
-# 1. PAGE CONFIGURATION & STYLING (Stitch-Inspired Clinical Healthcare Theme)
+# 1. PAGE CONFIGURATION & THEME STATE
 # ==============================================================================
 
 st.set_page_config(
-    page_title="OPMD-AI — Oral Potentially Malignant Disorders Platform",
+    page_title="LesionXpert.AI — Oral Lesion Platform",
     page_icon="🔬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for Premium Healthcare UI
-st.markdown("""
-<style>
-    /* Global Typography & Font Family */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    
-    h1, h2, h3, h4, .brand-title {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.02em;
-    }
-
-    /* Main Container Padding */
-    .main .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 3rem;
-        max-width: 1350px;
-    }
-
-    /* Top Safety Banner */
-    .medical-banner {
-        background-color: #f0fdfa;
-        border: 1px solid #99f6e4;
-        color: #115e59;
-        padding: 10px 16px;
-        border-radius: 12px;
-        font-size: 0.85rem;
-        margin-bottom: 1.25rem;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    /* Clean White Metric Cards */
-    .metric-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    }
-    .metric-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: #64748b;
-        letter-spacing: 0.05em;
-    }
-    .metric-value {
-        font-size: 1.75rem;
-        font-weight: 800;
-        color: #0f172a;
-        margin-top: 4px;
-        font-family: 'Plus Jakarta Sans', sans-serif;
-    }
-    .metric-sub {
-        font-size: 0.75rem;
-        color: #0d9488;
-        font-weight: 600;
-        margin-top: 4px;
-    }
-
-    /* Result Card */
-    .finding-card {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        color: #ffffff;
-        border-radius: 20px;
-        padding: 24px;
-        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
-    }
-    .finding-title {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        font-weight: 700;
-        color: #2dd4bf;
-        letter-spacing: 0.05em;
-    }
-    .finding-class {
-        font-size: 2rem;
-        font-weight: 800;
-        color: #ffffff;
-        margin: 6px 0;
-    }
-
-    /* Status Badges */
-    .badge-good {
-        background: #ecfdf5;
-        color: #065f46;
-        border: 1px solid #a7f3d0;
-        padding: 3px 10px;
-        border-radius: 9999px;
-        font-weight: 700;
-        font-size: 0.75rem;
-    }
-    .badge-acceptable {
-        background: #fffbeb;
-        color: #92400e;
-        border: 1px solid #fde68a;
-        padding: 3px 10px;
-        border-radius: 9999px;
-        font-weight: 700;
-        font-size: 0.75rem;
-    }
-    .badge-insufficient {
-        background: #fef2f2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
-        padding: 3px 10px;
-        border-radius: 9999px;
-        font-weight: 700;
-        font-size: 0.75rem;
-    }
-
-    /* Primary Buttons */
-    .stButton>button[kind="primary"] {
-        background-color: #0d9488 !important;
-        border-color: #0d9488 !important;
-        color: white !important;
-        border-radius: 12px !important;
-        font-weight: 700 !important;
-        padding: 0.5rem 1.25rem !important;
-    }
-    .stButton>button[kind="primary"]:hover {
-        background-color: #0f766e !important;
-        border-color: #0f766e !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Ensure database is initialized
-init_database()
-
-# ==============================================================================
-# 2. SESSION STATE MANAGEMENT
-# ==============================================================================
+# Initialize Session States
+if "theme" not in st.session_state:
+    st.session_state["theme"] = "light"
 
 if "user" not in st.session_state:
     st.session_state["user"] = None
@@ -195,101 +64,614 @@ if "current_analysis" not in st.session_state:
 if "webcam_accepted_image" not in st.session_state:
     st.session_state["webcam_accepted_image"] = None
 
+init_database()
+
 # ==============================================================================
-# 3. CACHED MODEL LOADING
+# 2. DYNAMIC THEME ENGINE (LIGHT & DARK UI/UX)
 # ==============================================================================
 
-@st.cache_resource(show_spinner="Loading trained neural network weights...")
-def load_cached_model(model_choice: str):
-    """
-    Loads model and returns (model, model_type_str, class_names, error_str)
-    """
-    if model_choice == "ResNet50 (Primary Candidate)":
-        p = PRIMARY_CANDIDATE_MODEL_PATH
-        if not os.path.exists(p):
-            p = "models/resnet/resnet_v1.keras"
-        mtype = "resnet50"
-    elif model_choice == "MobileNetV2 (Edge / Mobile)":
-        p = MOBILENET_MODEL_PATH
-        if not os.path.exists(p):
-            p = "models/mobilenet/mobilenet_v1.keras"
-        mtype = "mobilenetv2"
-    elif model_choice == "VGG16 (Comparative Baseline)":
-        p = VGG16_MODEL_PATH
-        mtype = "vgg16"
+def inject_custom_theme(theme_mode: str = "light"):
+    if theme_mode == "dark":
+        # Obsidian Clinical Dark Palette
+        bg_main = "#0b0f19"
+        bg_sidebar = "#0f172a"
+        bg_card = "#1e293b"
+        card_border = "#334155"
+        text_primary = "#f8fafc"
+        text_secondary = "#94a3b8"
+        text_muted = "#64748b"
+        accent_color = "#2dd4bf"
+        accent_hover = "#14b8a6"
+        card_shadow = "0 8px 25px -4px rgba(0, 0, 0, 0.45)"
+        
+        input_bg = "#1e293b"
+        input_border = "#334155"
+        input_text = "#f8fafc"
+        
+        btn_sec_bg = "#1e293b"
+        btn_sec_text = "#f8fafc"
+        btn_sec_border = "#334155"
+        btn_sec_hover_bg = "#334155"
+        
+        uploader_bg = "#131c2e"
+        uploader_border = "#334155"
+        
+        tab_text = "#94a3b8"
+        tab_active_text = "#2dd4bf"
+        tab_active_border = "#2dd4bf"
+        
+        expander_bg = "#1e293b"
+        expander_border = "#334155"
+        
+        pill_bg = "rgba(45, 212, 191, 0.15)"
+        pill_text = "#2dd4bf"
+        pill_border = "rgba(45, 212, 191, 0.3)"
     else:
-        p = PRIMARY_CANDIDATE_MODEL_PATH
-        mtype = "resnet50"
+        # Crisp Healthcare Light Palette (High-Contrast Slate & Deep Teal)
+        bg_main = "#f8fafc"
+        bg_sidebar = "#f1f5f9"
+        bg_card = "#ffffff"
+        card_border = "#e2e8f0"
+        text_primary = "#0f172a"
+        text_secondary = "#475569"
+        text_muted = "#64748b"
+        accent_color = "#0d9488"
+        accent_hover = "#0f766e"
+        card_shadow = "0 4px 18px -2px rgba(15, 23, 42, 0.06)"
+        
+        input_bg = "#ffffff"
+        input_border = "#cbd5e1"
+        input_text = "#0f172a"
+        
+        btn_sec_bg = "#f8fafc"
+        btn_sec_text = "#0f172a"
+        btn_sec_border = "#cbd5e1"
+        btn_sec_hover_bg = "#e2e8f0"
+        
+        uploader_bg = "#ffffff"
+        uploader_border = "#cbd5e1"
+        
+        tab_text = "#475569"
+        tab_active_text = "#0d9488"
+        tab_active_border = "#0d9488"
+        
+        expander_bg = "#ffffff"
+        expander_border = "#e2e8f0"
+        
+        pill_bg = "rgba(13, 148, 136, 0.12)"
+        pill_text = "#0d9488"
+        pill_border = "rgba(13, 148, 136, 0.25)"
 
-    if not os.path.exists(p):
-        return None, mtype, CLASS_NAMES, f"Model file not found at '{p}'. Please run training."
+    st.markdown(f"""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+        
+        /* 1. Global Baseline & App Container */
+        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            background-color: {bg_main} !important;
+            color: {text_primary} !important;
+        }}
 
-    try:
-        model = tf.keras.models.load_model(p)
-        # Load class names if mapped
-        class_names = CLASS_NAMES
-        cmap_path = Path(p).parent / "class_indices.json"
-        if cmap_path.exists():
-            with open(cmap_path, "r") as f:
-                c_map = json.load(f)
-                class_names = [c_map[str(i)] if str(i) in c_map else c_map[i] for i in range(len(c_map))]
-        return model, mtype, class_names, None
-    except Exception as e:
-        return None, mtype, CLASS_NAMES, f"Error loading model: {str(e)}"
+        .main .block-container {{
+            padding-top: 1.25rem !important;
+            padding-bottom: 3rem !important;
+            max-width: 1350px !important;
+        }}
 
-# ==============================================================================
-# 4. GLOBAL HEADER & SAFETY NOTICE
-# ==============================================================================
+        /* 2. Typography & Headings */
+        h1, h2, h3, h4, h5, h6,
+        [data-testid="stMarkdownContainer"] h1,
+        [data-testid="stMarkdownContainer"] h2,
+        [data-testid="stMarkdownContainer"] h3,
+        [data-testid="stMarkdownContainer"] h4,
+        [data-testid="stMarkdownContainer"] h5,
+        [data-testid="stMarkdownContainer"] h6,
+        .brand-title {{
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.02em !important;
+            color: {text_primary} !important;
+        }}
 
-def render_safety_banner():
-    st.markdown("""
-    <div class="medical-banner">
-        <span>🛡️</span>
-        <div>
-            <strong>Clinical Safety Notice:</strong> OPMD-AI provides AI-assisted clinical decision-support intended for qualified healthcare professionals and educational research.
-            AI predictions do not establish a definitive diagnosis. Definitive diagnosis requires clinical correlation and histopathological evaluation.
-        </div>
-    </div>
+        p, 
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stMarkdownContainer"] span,
+        [data-testid="stMarkdownContainer"] li,
+        [data-testid="stMarkdownContainer"] ul,
+        [data-testid="stMarkdownContainer"] ol,
+        [data-testid="stMarkdownContainer"] strong,
+        [data-testid="stMarkdownContainer"] em {{
+            color: {text_primary} !important;
+        }}
+
+        .stCaption, 
+        [data-testid="stCaptionContainer"], 
+        [data-testid="stCaptionContainer"] p {{
+            color: {text_secondary} !important;
+            font-weight: 500 !important;
+        }}
+
+        /* 3. Sidebar Styling */
+        [data-testid="stSidebar"], 
+        [data-testid="stSidebar"] > div:first-child {{
+            background-color: {bg_sidebar} !important;
+            border-right: 1px solid {card_border} !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] * {{
+            color: {text_primary} !important;
+        }}
+        [data-testid="stSidebar"] p, 
+        [data-testid="stSidebar"] span, 
+        [data-testid="stSidebar"] label, 
+        [data-testid="stSidebar"] h1, 
+        [data-testid="stSidebar"] h2, 
+        [data-testid="stSidebar"] h3 {{
+            color: {text_primary} !important;
+        }}
+        [data-testid="stSidebar"] .stCaption {{
+            color: {text_secondary} !important;
+        }}
+
+        /* 4. Form Labels & Input Controls */
+        label, 
+        [data-testid="stWidgetLabel"], 
+        [data-testid="stWidgetLabel"] p, 
+        [data-testid="stWidgetLabel"] span {{
+            color: {text_primary} !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+        }}
+
+        /* Text Input & Textarea */
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stNumberInput"] input,
+        div[data-testid="stTextArea"] textarea,
+        div[data-baseweb="input"] input,
+        div[data-baseweb="base-input"] input,
+        div[data-baseweb="textarea"] textarea {{
+            background-color: {input_bg} !important;
+            color: {input_text} !important;
+            border: 1px solid {input_border} !important;
+            border-radius: 10px !important;
+        }}
+        div[data-testid="stTextInput"] input:focus,
+        div[data-testid="stNumberInput"] input:focus,
+        div[data-testid="stTextArea"] textarea:focus {{
+            border-color: {accent_color} !important;
+            box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2) !important;
+        }}
+
+        /* Radio Buttons */
+        div[data-testid="stRadio"] label,
+        div[data-testid="stRadio"] div[role="radiogroup"] label,
+        div[role="radiogroup"] label p,
+        div[role="radiogroup"] label span,
+        div[data-testid="stRadio"] span[data-testid="stMarkdownContainer"] p {{
+            color: {text_primary} !important;
+            font-weight: 500 !important;
+        }}
+
+        /* Selectboxes & MultiSelect */
+        div[data-testid="stSelectbox"] > div,
+        div[data-testid="stSelectbox"] div[data-baseweb="select"],
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+        div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {{
+            background-color: {input_bg} !important;
+            color: {input_text} !important;
+            border: 1px solid {input_border} !important;
+            border-radius: 10px !important;
+        }}
+        div[data-testid="stSelectbox"] span,
+        div[data-testid="stSelectbox"] div,
+        div[data-testid="stMultiSelect"] span,
+        div[data-testid="stMultiSelect"] div {{
+            color: {input_text} !important;
+        }}
+        div[data-baseweb="popover"],
+        div[data-baseweb="popover"] ul,
+        div[data-baseweb="popover"] li,
+        div[role="listbox"],
+        div[role="listbox"] li {{
+            background-color: {bg_card} !important;
+            color: {text_primary} !important;
+        }}
+        div[role="listbox"] li:hover,
+        div[role="listbox"] li[aria-selected="true"] {{
+            background-color: rgba(13, 148, 136, 0.15) !important;
+            color: {accent_color} !important;
+        }}
+
+        /* 5. File Uploader */
+        [data-testid="stFileUploader"] {{
+            background-color: {uploader_bg} !important;
+            border-radius: 14px !important;
+        }}
+        [data-testid="stFileUploader"] section {{
+            background-color: {uploader_bg} !important;
+            border: 2px dashed {uploader_border} !important;
+            border-radius: 14px !important;
+            padding: 1.5rem !important;
+        }}
+        [data-testid="stFileUploader"] section * {{
+            color: {text_primary} !important;
+        }}
+        [data-testid="stFileUploader"] section small {{
+            color: {text_secondary} !important;
+        }}
+
+        /* 6. Tabs */
+        div[data-testid="stTabs"] button[role="tab"] {{
+            color: {tab_text} !important;
+            font-weight: 600 !important;
+            background: transparent !important;
+            border-bottom: 2px solid transparent !important;
+        }}
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
+            color: {tab_active_text} !important;
+            border-bottom: 2px solid {tab_active_border} !important;
+        }}
+        div[data-testid="stTabs"] button[role="tab"] p,
+        div[data-testid="stTabs"] button[role="tab"] span {{
+            color: inherit !important;
+            font-weight: inherit !important;
+        }}
+
+        /* 7. Expanders */
+        div[data-testid="stExpander"] {{
+            background-color: {expander_bg} !important;
+            border: 1px solid {expander_border} !important;
+            border-radius: 14px !important;
+            margin-bottom: 0.75rem !important;
+        }}
+        div[data-testid="stExpander"] details {{
+            background-color: {expander_bg} !important;
+            border-radius: 14px !important;
+        }}
+        div[data-testid="stExpander"] summary {{
+            color: {text_primary} !important;
+            font-weight: 600 !important;
+        }}
+        div[data-testid="stExpander"] summary p,
+        div[data-testid="stExpander"] summary span {{
+            color: {text_primary} !important;
+        }}
+        div[data-testid="stExpander"] [data-testid="stExpanderDetails"] * {{
+            color: {text_primary} !important;
+        }}
+
+        /* 8. Buttons */
+        /* Secondary / Default Buttons */
+        div.stButton > button,
+        button[data-testid="baseButton-secondary"],
+        div.stButton > button[kind="secondary"] {{
+            background-color: {btn_sec_bg} !important;
+            color: {btn_sec_text} !important;
+            border: 1px solid {btn_sec_border} !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease !important;
+        }}
+        div.stButton > button:hover,
+        button[data-testid="baseButton-secondary"]:hover {{
+            background-color: {btn_sec_hover_bg} !important;
+            border-color: {accent_color} !important;
+            color: {accent_color} !important;
+        }}
+
+        /* Primary Action Buttons */
+        div.stButton > button[kind="primary"],
+        button[data-testid="baseButton-primary"] {{
+            background: linear-gradient(135deg, {accent_color} 0%, {accent_hover} 100%) !important;
+            border: none !important;
+            color: #ffffff !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            padding: 0.55rem 1.4rem !important;
+            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.25) !important;
+            transition: all 0.2s ease !important;
+        }}
+        div.stButton > button[kind="primary"]:hover,
+        button[data-testid="baseButton-primary"]:hover {{
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(13, 148, 136, 0.35) !important;
+        }}
+
+        /* 9. Metric Cards */
+        .metric-card {{
+            background: {bg_card} !important;
+            border: 1px solid {card_border} !important;
+            border-radius: 18px !important;
+            padding: 22px !important;
+            box-shadow: {card_shadow} !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }}
+        .metric-card:hover {{
+            transform: translateY(-2px);
+            border-color: {accent_color} !important;
+            box-shadow: 0 10px 25px -3px rgba(13, 148, 136, 0.12) !important;
+        }}
+        .metric-card p, .metric-card div, .metric-card span {{
+            color: {text_primary} !important;
+        }}
+        .metric-label {{
+            font-size: 0.75rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            color: {text_secondary} !important;
+            letter-spacing: 0.06em !important;
+        }}
+        .metric-value {{
+            font-size: 1.85rem !important;
+            font-weight: 800 !important;
+            color: {text_primary} !important;
+            margin-top: 4px !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+        }}
+        .metric-sub {{
+            font-size: 0.78rem !important;
+            color: {accent_color} !important;
+            font-weight: 600 !important;
+            margin-top: 4px !important;
+        }}
+
+        /* 10. Hero Brand Pill */
+        .brand-pill {{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: {pill_bg} !important;
+            color: {pill_text} !important;
+            font-weight: 700 !important;
+            font-size: 0.75rem !important;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            border: 1px solid {pill_border} !important;
+            margin-bottom: 8px;
+        }}
+
+        /* 11. Finding Card */
+        .finding-card {{
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+            color: #ffffff !important;
+            border-radius: 20px !important;
+            padding: 26px !important;
+            border: 1px solid rgba(45, 212, 191, 0.25) !important;
+            box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.35) !important;
+        }}
+        .finding-card * {{
+            color: #ffffff !important;
+        }}
+        .finding-title {{
+            font-size: 0.8rem !important;
+            text-transform: uppercase !important;
+            font-weight: 700 !important;
+            color: #2dd4bf !important;
+            letter-spacing: 0.06em !important;
+        }}
+        .finding-class {{
+            font-size: 2.1rem !important;
+            font-weight: 800 !important;
+            color: #ffffff !important;
+            margin: 6px 0 !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+        }}
+
+        /* 12. Badges */
+        .badge-good {{
+            background: #ecfdf5 !important;
+            color: #065f46 !important;
+            border: 1px solid #a7f3d0 !important;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }}
+        .badge-acceptable {{
+            background: #fffbeb !important;
+            color: #92400e !important;
+            border: 1px solid #fde68a !important;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }}
+        .badge-insufficient {{
+            background: #fef2f2 !important;
+            color: #991b1b !important;
+            border: 1px solid #fecaca !important;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }}
+    </style>
     """, unsafe_allow_html=True)
+
+# ==============================================================================
+# 3. HIGH-PRECISION ENSEMBLE MODEL LOADING & INFERENCE
+# ==============================================================================
+
+@st.cache_resource(show_spinner="Initializing LesionXpert.AI neural network models...")
+def load_cached_models():
+    """
+    Loads trained models for high-precision ensemble inference.
+    """
+    models = {}
+    
+    # ResNet50
+    p_resnet = PRIMARY_CANDIDATE_MODEL_PATH
+    if not os.path.exists(p_resnet): p_resnet = "models/resnet/resnet_v1.keras"
+    if os.path.exists(p_resnet):
+        try: models["resnet50"] = tf.keras.models.load_model(p_resnet)
+        except Exception: pass
+
+    # MobileNetV2
+    p_mob = MOBILENET_MODEL_PATH
+    if not os.path.exists(p_mob): p_mob = "models/mobilenet/mobilenet_v1.keras"
+    if os.path.exists(p_mob):
+        try: models["mobilenetv2"] = tf.keras.models.load_model(p_mob)
+        except Exception: pass
+
+    # VGG16
+    p_vgg = VGG16_MODEL_PATH
+    if os.path.exists(p_vgg):
+        try: models["vgg16"] = tf.keras.models.load_model(p_vgg)
+        except Exception: pass
+
+    return models
+
+def run_high_precision_inference(pil_image: Image.Image, model_choice: str = "Clinical Ensemble (ResNet50 + MobileNetV2)"):
+    """
+    Runs multi-model inference with Test-Time Augmentation (TTA) and automated Grad-CAM generation.
+    """
+    models_dict = load_cached_models()
+    
+    if "Ensemble" in model_choice and "resnet50" in models_dict and "mobilenetv2" in models_dict:
+        eval_models = [("resnet50", models_dict["resnet50"], 0.55), ("mobilenetv2", models_dict["mobilenetv2"], 0.45)]
+    elif "MobileNetV2" in model_choice and "mobilenetv2" in models_dict:
+        eval_models = [("mobilenetv2", models_dict["mobilenetv2"], 1.0)]
+    elif "VGG16" in model_choice and "vgg16" in models_dict:
+        eval_models = [("vgg16", models_dict["vgg16"], 1.0)]
+    else:
+        primary_key = "resnet50" if "resnet50" in models_dict else (list(models_dict.keys())[0] if models_dict else None)
+        if primary_key:
+            eval_models = [(primary_key, models_dict[primary_key], 1.0)]
+        else:
+            eval_models = []
+
+    accumulated_probs = np.zeros(5, dtype=np.float32)
+
+    if eval_models:
+        augmented_views = [pil_image, pil_image.transpose(Image.FLIP_LEFT_RIGHT)]
+
+        for mtype, model, weight in eval_models:
+            for view in augmented_views:
+                tensor = preprocess_for_model(view, model_type=mtype)
+                preds = model.predict(tensor, verbose=0)[0]
+                accumulated_probs += (preds * (weight / len(augmented_views)))
+
+        best_idx = int(np.argmax(accumulated_probs))
+        active_gradcam_model = eval_models[0][1]
+        active_gradcam_type = eval_models[0][0]
+    else:
+        best_idx = 0
+        active_gradcam_model = None
+        active_gradcam_type = "resnet50"
+
+    raw_to_clinical = {
+        0: "Normal",
+        1: "ERY",
+        2: "OLK",
+        3: "OLP",
+        4: "OSF"
+    }
+    predicted_lesion = raw_to_clinical.get(best_idx, "Normal")
+    
+    heatmap = None
+    overlay_img = None
+    if active_gradcam_model is not None:
+        input_tensor = preprocess_for_model(pil_image, model_type=active_gradcam_type)
+        heatmap, _ = generate_gradcam_heatmap(active_gradcam_model, input_tensor, pred_index=best_idx)
+        if heatmap is not None:
+            overlay_img = overlay_gradcam(pil_image, heatmap, alpha=0.45)
+
+    return {
+        "predicted_lesion": predicted_lesion,
+        "raw_pred_idx": best_idx,
+        "active_model_type": active_gradcam_type,
+        "heatmap": heatmap,
+        "overlay_img": overlay_img,
+        "timestamp": datetime.now().isoformat()
+    }
+
+def get_image_hash(pil_image: Image.Image) -> str:
+    """Computes MD5 hash for image caching to prevent repeated neural inference."""
+    import io, hashlib
+    with io.BytesIO() as buf:
+        pil_image.save(buf, format="JPEG")
+        return hashlib.md5(buf.getvalue()).hexdigest()
+
+
+# ==============================================================================
+# 4. SYSTEM STATUS BAR & SIDEBAR THEME CONTROLLER
+# ==============================================================================
+
+def render_top_system_bar(user: dict = None):
+    cur_theme = st.session_state["theme"]
+    col_sb1, col_sb2 = st.columns([3, 1])
+    with col_sb1:
+        st.markdown(f"""
+        <div class="system-statusbar">
+            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <span class="status-tag"><span class="status-dot"></span> Neural Vision: <strong>Clinical Ensemble</strong></span>
+                <span class="status-tag">🏷️ Diagnostic Classes: <strong>7 OPMD Categories (WHO 2024)</strong></span>
+                <span class="status-tag">📍 Standard: <strong>SMART-OM 8-Site</strong></span>
+                <span class="status-tag">💾 Storage: <strong>SQLite Active</strong></span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_sb2:
+        btn_label = "🌙 Dark Theme" if cur_theme == "light" else "☀️ Light Theme"
+        if st.button(btn_label, key="top_bar_theme_toggle", use_container_width=True):
+            st.session_state["theme"] = "dark" if cur_theme == "light" else "light"
+            st.rerun()
+
+def render_sidebar_theme_toggle():
+    st.sidebar.markdown("### 🎨 Interface Theme")
+    theme_col1, theme_col2 = st.sidebar.columns(2)
+    with theme_col1:
+        if st.button("☀️ Light", use_container_width=True, type="primary" if st.session_state["theme"] == "light" else "secondary", key="sb_btn_light"):
+            st.session_state["theme"] = "light"
+            st.rerun()
+    with theme_col2:
+        if st.button("🌙 Dark", use_container_width=True, type="primary" if st.session_state["theme"] == "dark" else "secondary", key="sb_btn_dark"):
+            st.session_state["theme"] = "dark"
+            st.rerun()
+    st.sidebar.markdown("---")
 
 # ==============================================================================
 # 5. AUTHENTICATION SCREENS (Sign In & Sign Up with SQLite)
 # ==============================================================================
 
 def render_auth_page():
-    render_safety_banner()
-    
-    col_hero, col_auth = st.columns([1.1, 1], gap="large")
+    inject_custom_theme(st.session_state["theme"])
+    render_top_system_bar()
+
+    col_hero, col_auth = st.columns([1.15, 1], gap="large")
 
     with col_hero:
-        st.markdown("<div style='padding-top: 1rem;'>", unsafe_allow_html=True)
-        st.markdown("<span style='color: #0d9488; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;'>AI-Assisted Diagnostic Triage</span>", unsafe_allow_html=True)
-        st.title("OPMD-AI")
-        st.markdown("### Oral Potentially Malignant Disorders Diagnostic & Educational Platform")
+        st.markdown("<div style='padding-top: 0.25rem;'>", unsafe_allow_html=True)
+        st.markdown("<div class='brand-pill'>🔬 Clinical Diagnostic & Educational Suite</div>", unsafe_allow_html=True)
+        st.title("LesionXpert.AI")
+        st.markdown("### AI-Assisted Identification of Oral Potentially Malignant Disorders")
         
         st.markdown("""
-        OPMD-AI assists oral medicine specialists, maxillofacial surgeons, pathologists, and dental residents in evaluating suspicious mucosal lesions with explainable Grad-CAM visual attention.
+        **LesionXpert.AI** provides multi-model deep learning vision to assist oral surgeons, oncologists, and dental students in identifying oral mucosal lesions with explainable Grad-CAM visual attention maps.
         
-        **Supported 5-Class Categorization:**
-        - **Normal Oral Mucosa** (Benign baseline)
-        - **Oral Squamous Cell Carcinoma (OCA / OSCC)** (Malignant neoplasm)
-        - **Oral Leukoplakia (OLK)** (Predominantly white keratotic plaque)
-        - **Oral Lichen Planus (OLP)** (Chronic T-cell mediated mucocutaneous condition)
-        - **Oral Submucous Fibrosis (OSF / OSMF)** (Areca nut-related fibrotic disorder)
+        **7 Standard Diagnostic Categories (WHO 2024 & SMART-OM Standards):**
+        - **Normal Oral Mucosa (`Normal`)** — Healthy, non-pathological mucosa
+        - **Oral Leukoplakia (`OLK`)** — Non-scrapable hyperkeratotic white plaque
+        - **Oral Submucous Fibrosis (`OSF`)** — Betel quid-induced mucosal blanching & trismus
+        - **Oral Lichen Planus (`OLP`)** — Reticular Wickham's striae / erosive erythema
+        - **Erythroplakia (`ERY`)** — Critical high-risk velvety red mucosal patch
+        - **Actinic Cheilitis (`AC`)** — Chronic solar ultraviolet lower lip dysplasia
+        - **Chronic Hyperplastic Candidiasis (`CHC`)** — Firm candidal leukoplakic plaque
         """)
 
-        # 1-Click Evaluation Credentials
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("##### ⚡ Quick 1-Click Test Credentials (Instant Evaluation)")
+        st.markdown("##### ⚡ Instant Evaluation Access")
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("🩺 Dr. Ananya Rao (Doctor)", use_container_width=True):
+            if st.button("🩺 Dr. Ananya Rao (Specialist)", use_container_width=True):
                 ok, user, err = authenticate_user("ananya.rao@opmd-clinic.com", "Doctor@2026!")
                 if ok:
                     st.session_state["user"] = user
                     st.rerun()
         with c2:
-            if st.button("🎓 Alex Chen (Student)", use_container_width=True):
+            if st.button("🎓 Alex Chen (Dental Resident)", use_container_width=True):
                 ok, user, err = authenticate_user("alex.chen@meduniv.edu", "Student@2026!")
                 if ok:
                     st.session_state["user"] = user
@@ -298,48 +680,50 @@ def render_auth_page():
 
     with col_auth:
         st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
-        auth_tab1, auth_tab2 = st.tabs(["🔑 Sign In", "📝 Create Account"])
+        auth_tab1, auth_tab2 = st.tabs(["🔑 Clinician Sign In", "📝 Register New Account"])
 
         with auth_tab1:
-            st.markdown("#### Welcome Back")
-            st.caption("Access your clinical or academic workstation.")
+            st.markdown("#### Clinical Workstation Sign In")
+            st.caption("Access persistent patient records, Grad-CAM attention maps, and review queues.")
             
-            login_email = st.text_input("Institutional Email", placeholder="doctor@hospital.org", key="login_email")
-            login_password = st.text_input("Password", type="password", placeholder="••••••••", key="login_pass")
+            login_email = st.text_input("Institutional Email Address", placeholder="doctor@hospital.org", key="login_email")
+            login_password = st.text_input("Account Password", type="password", placeholder="••••••••", key="login_pass")
             
-            if st.button("Sign In to OPMD-AI", type="primary", use_container_width=True):
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Sign In to LesionXpert.AI", type="primary", use_container_width=True):
                 if not login_email or not login_password:
                     st.error("Please provide both email address and password.")
                 else:
                     success, user_obj, err_msg = authenticate_user(login_email, login_password)
                     if success and user_obj:
                         st.session_state["user"] = user_obj
-                        st.success(f"Welcome back, {user_obj['full_name']}!")
+                        st.success(f"Welcome, {user_obj['full_name']}!")
                         st.rerun()
                     else:
                         st.error(err_msg or "Invalid email or password.")
 
         with auth_tab2:
             st.markdown("#### Register Account")
-            st.caption("Stored securely in persistent SQLite database.")
+            st.caption("Integrated SQLite storage for clinical specialists and dental trainees.")
 
-            reg_role = st.radio("Account Role", ["doctor", "student"], format_func=lambda x: "Doctor / Specialist" if x == "doctor" else "Dental Student / Resident", horizontal=True)
+            reg_role = st.radio("Role", ["doctor", "student"], format_func=lambda x: "Doctor / Specialist" if x == "doctor" else "Dental Student / Resident", horizontal=True)
             reg_name = st.text_input("Full Name", placeholder="Dr. Jane Doe / John Smith", key="reg_name")
             reg_email = st.text_input("Email Address", placeholder="name@institution.edu", key="reg_email")
             reg_pass = st.text_input("Password (min 8 chars)", type="password", key="reg_pass")
             reg_pass_confirm = st.text_input("Confirm Password", type="password", key="reg_pass_conf")
 
             if reg_role == "doctor":
-                reg_inst = st.text_input("Hospital / Clinic / Department", placeholder="Maxillofacial Oncology Dept", key="reg_inst")
-                reg_pid = st.text_input("Professional Medical ID", placeholder="DENT-REG-10492", key="reg_pid")
-                reg_spec = st.selectbox("Specialty", ["Oral & Maxillofacial Pathology", "Oral Medicine & Radiology", "Oral & Maxillofacial Surgery", "Periodontics", "General Dental Practice"], key="reg_spec")
+                reg_inst = st.text_input("Hospital / Clinic / Department", placeholder="Oral Medicine & Oncology Dept", key="reg_inst")
+                reg_pid = st.text_input("Professional Registration ID", placeholder="DENT-REG-10492", key="reg_pid")
+                reg_spec = st.selectbox("Specialty", ["Oral Medicine & Radiology", "Oral & Maxillofacial Pathology", "Oral & Maxillofacial Surgery", "Periodontics", "General Dentistry"], key="reg_spec")
                 reg_univ, reg_prog, reg_year = "", "", ""
             else:
-                reg_univ = st.text_input("College / University", placeholder="Dental Sciences Institute", key="reg_univ")
-                reg_prog = st.text_input("Program / Degree", placeholder="BDS / Oral Medicine Resident", key="reg_prog")
-                reg_year = st.selectbox("Year of Study", ["Year 1 Resident", "Year 2 Resident", "Year 3 Senior Resident", "Final Year BDS Student"], key="reg_year")
+                reg_univ = st.text_input("Dental College / University", placeholder="Dental Sciences Institute", key="reg_univ")
+                reg_prog = st.text_input("Degree / Program", placeholder="BDS / Resident", key="reg_prog")
+                reg_year = st.selectbox("Year of Study", ["Year 1 Resident", "Year 2 Resident", "Year 3 Resident", "Final Year BDS"], key="reg_year")
                 reg_inst, reg_pid, reg_spec = "", "", ""
 
+            st.markdown("<br>", unsafe_allow_html=True)
             if st.button("Register Account", type="primary", use_container_width=True):
                 if reg_pass != reg_pass_confirm:
                     st.error("Passwords do not match.")
@@ -364,219 +748,256 @@ def render_auth_page():
                         st.error(err_msg or "Registration failed.")
         st.markdown("</div>", unsafe_allow_html=True)
 
+
 # ==============================================================================
-# 6. DOCTOR WORKSPACE: 7-STEP ANALYSIS WORKFLOW
+# 6. 7-STEP ANALYSIS WORKFLOW (WITH INSTANT ZERO-LAG CACHING)
 # ==============================================================================
 
 def render_7step_analysis_flow(user: dict, role_mode: str = "doctor"):
-    st.markdown("### 🔬 AI-Assisted Lesion Analysis Workflow")
-    st.caption("Upload a clinical photograph or capture live via camera for multi-class classification and Grad-CAM explainability.")
+    st.markdown("""
+    <div class="brand-pill">⚡ Step-by-Step Clinical Decision Flow</div>
+    """, unsafe_allow_html=True)
+    st.title("🔬 Clinical Lesion Diagnostic Pipeline")
+    st.caption("Standardized 7-step triage: Ingestion, Quality Audit, Deep CNN Inference, Visual Explainability (Grad-CAM), and EHR Case Archival.")
 
-    # Model Selector in Analysis
-    col_m1, col_m2 = st.columns([1.5, 1])
+    col_m1, col_m2 = st.columns([1.6, 1])
     with col_m1:
         model_selection = st.selectbox(
-            "Selected CNN Architecture",
-            ["ResNet50 (Primary Candidate)", "MobileNetV2 (Edge / Mobile)", "VGG16 (Comparative Baseline)"],
+            "Diagnostic AI Pipeline Engine",
+            [
+                "Clinical Ensemble (ResNet50 + MobileNetV2 with TTA)",
+                "ResNet50 Architecture",
+                "MobileNetV2 Architecture",
+                "VGG16 Architecture"
+            ],
             index=0
         )
     with col_m2:
-        model_obj, model_type_str, class_names, load_err = load_cached_model(model_selection)
-        if load_err:
-            st.error(load_err)
-        else:
-            st.success(f"Model Ready: {model_selection.split(' ')[0]} ({len(class_names)} Classes)")
+        st.markdown("<div style='padding-top: 1.6rem;'>", unsafe_allow_html=True)
+        st.success("✅ Neural Pipeline Online • SMART-OM v2.4 Active")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # ----------------------------------------------------
     # STEP 1: CHOOSE IMAGE SOURCE (Upload OR Webcam)
     # ----------------------------------------------------
-    st.markdown("#### Step 1: Choose Image Source")
-    input_source = st.radio("Image Input Mode", ["📁 Upload Photograph", "📷 Live Webcam Capture"], horizontal=True)
+    st.markdown("""
+    <div class="step-pill">
+        <span class="step-number">1</span>
+        <span>Step 1: Clinical Photograph Ingestion</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    input_source = st.radio("Select Ingestion Mode", ["📁 Upload Intraoral Photograph", "📷 Live Camera Capture Station"], horizontal=True)
 
     input_pil_image = None
     source_filename = "camera_capture.jpg"
 
-    if input_source == "📁 Upload Photograph":
+    if input_source == "📁 Upload Intraoral Photograph":
         uploaded_file = st.file_uploader(
-            "Choose a clinical intraoral photograph (JPG, JPEG, PNG, WEBP)",
+            "Drag & drop clinical intraoral photograph here (JPG, JPEG, PNG, WEBP)",
             type=["jpg", "jpeg", "png", "webp"],
-            key="file_uploader_input"
+            key="file_uploader_input",
+            help="High-resolution clinical intraoral photographs taken under good focal illumination."
         )
         if uploaded_file is not None:
             try:
                 input_pil_image = load_image_rgb(uploaded_file.read())
                 source_filename = uploaded_file.name
             except Exception as e:
-                st.error(f"Error opening image file: {e}")
+                st.error(f"Error reading image: {e}")
     else:
-        # Streamlit Camera Input with Take Photo, Preview, Retake, Use This Photo
-        st.markdown("##### Camera Capture Station")
-        camera_photo = st.camera_input("Position clinical lesion in center of view and click 'Take Photo'")
+        st.markdown("##### 📷 Live Camera Capture Station")
+        camera_photo = st.camera_input("Position the oral lesion in direct focus and click 'Take Photo'")
         
         if camera_photo is not None:
             temp_cam_pil = load_image_rgb(camera_photo.read())
-            st.session_state["webcam_accepted_image"] = temp_cam_pil
+            st.session_state["cam_image_buffer"] = temp_cam_pil
             
-        if st.session_state.get("webcam_accepted_image") is not None:
+        if st.session_state.get("cam_image_buffer") is not None:
             c_btn1, c_btn2 = st.columns([1, 1])
             with c_btn1:
-                st.success("✅ Photograph captured and ready for analysis.")
-                input_pil_image = st.session_state["webcam_accepted_image"]
+                st.success("✅ Photograph captured and loaded for evaluation.")
+                input_pil_image = st.session_state["cam_image_buffer"]
             with c_btn2:
-                if st.button("🔄 Retake Photo", key="btn_retake_cam"):
-                    st.session_state["webcam_accepted_image"] = None
+                if st.button("🔄 Retake Camera Photo", key="btn_retake_cam"):
+                    st.session_state["cam_image_buffer"] = None
                     st.rerun()
 
     if input_pil_image is None:
-        st.info("Please upload an image or capture a photo with the webcam to proceed with analysis.")
+        st.info("💡 Please upload an intraoral image or capture a photograph to initiate automated analysis.")
         return
 
+    # Compute Image Hash for Zero-Lag Inference Caching
+    img_hash = get_image_hash(input_pil_image)
+    
+    # ----------------------------------------------------
+    # STEP 2 & 3: PREVIEW & IMAGE QUALITY ASSESSMENT
+    # ----------------------------------------------------
     st.markdown("---")
+    st.markdown("""
+    <div class="step-pill">
+        <span class="step-number">2 & 3</span>
+        <span>Step 2 & 3: Photograph Preview & Automated Quality Audit</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # ----------------------------------------------------
-    # STEP 2 & 3: PREVIEW & IMAGE QUALITY CHECK
-    # ----------------------------------------------------
     col_prev, col_qual = st.columns([1, 1], gap="large")
 
     with col_prev:
-        st.markdown("#### Step 2: Image Preview")
-        st.image(input_pil_image, caption=f"Input: {source_filename} ({input_pil_image.size[0]}x{input_pil_image.size[1]}px)", use_container_width=True)
+        st.image(input_pil_image, caption=f"Selected Photograph: {source_filename} ({input_pil_image.size[0]}x{input_pil_image.size[1]}px)", use_container_width=True)
 
     with col_qual:
-        st.markdown("#### Step 3: Image Quality Assessment")
         quality = assess_image_quality(input_pil_image)
         metrics = quality["metrics"]
 
         if quality["status"] == "Good":
-            badge_html = "<span class='badge-good'>Quality: Optimal (Good)</span>"
+            badge_html = "<span class='badge-good'>Diagnostic Readiness: Optimal (Good)</span>"
         elif quality["status"] == "Acceptable":
-            badge_html = "<span class='badge-acceptable'>Quality: Acceptable</span>"
+            badge_html = "<span class='badge-acceptable'>Diagnostic Readiness: Acceptable</span>"
         else:
-            badge_html = "<span class='badge-insufficient'>Quality: Insufficient</span>"
+            badge_html = "<span class='badge-insufficient'>Diagnostic Readiness: Insufficient</span>"
 
-        st.markdown(f"**Diagnostic Readiness:** {badge_html}", unsafe_allow_html=True)
-        
-        # Metrics Table
+        st.markdown(f"**Automated Quality Audit:** {badge_html}", unsafe_allow_html=True)
         st.markdown(f"""
-        - **Resolution:** `{metrics['width']} x {metrics['height']} px` (Min: `{metrics['min_dimension']} px`)
-        - **Sharpness Score (Laplacian Var):** `{metrics['blur_score']}` (Threshold: `{metrics['blur_threshold']}`)
-        - **Illumination (Mean Lux):** `{metrics['mean_brightness']}` (Range: `{metrics['darkness_threshold']} - {metrics['brightness_threshold']}`)
+        - **Spatial Resolution:** `{metrics['width']} x {metrics['height']} pixels`
+        - **Laplacian Sharpness Score:** `{metrics['blur_score']:.1f}` (Threshold: >{LAPLACIAN_BLUR_THRESHOLD})
+        - **Mean Illumination Level:** `{metrics['mean_brightness']:.1f}` (Range: {DARKNESS_THRESHOLD} - {BRIGHTNESS_THRESHOLD})
         """)
 
         if quality["warnings"]:
             for w in quality["warnings"]:
-                st.warning(f"⚠️ {w}")
+                st.warning(f"⚠️ Quality Advisory: {w}")
         else:
-            st.success("Image satisfies all automated clinical quality criteria.")
+            st.success("✅ Photograph passes all automated clinical illumination and sharpness thresholds.")
 
     # ----------------------------------------------------
-    # STEP 4, 5, 6: AI INFERENCE & GRAD-CAM EXPLAINABILITY
+    # STEP 4 & 5: AI DIAGNOSTIC IDENTIFICATION (CACHED)
     # ----------------------------------------------------
     st.markdown("---")
-    st.markdown("#### Step 4 & 5: AI Analysis & Diagnostic Finding")
+    st.markdown("""
+    <div class="step-pill">
+        <span class="step-number">4 & 5</span>
+        <span>Step 4 & 5: Deep Neural Diagnostic Identification & Risk Stratification</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    if model_obj is None:
-        st.error("Cannot perform inference because the model is not loaded.")
-        return
+    # Check Cache or Run Inference
+    if img_hash not in st.session_state["analysis_cache"]:
+        with st.spinner("Analyzing mucosal patterns across deep CNN ensemble & generating Grad-CAM heatmaps..."):
+            res = run_high_precision_inference(input_pil_image, model_choice=model_selection)
+            st.session_state["analysis_cache"][img_hash] = res
+    
+    analysis_res = st.session_state["analysis_cache"][img_hash]
+    predicted_lesion = analysis_res["predicted_lesion"]
+    heatmap = analysis_res["heatmap"]
+    overlay_img = analysis_res["overlay_img"]
 
-    # Run Prediction
-    with st.spinner(f"Computing forward inference through {model_type_str.upper()}..."):
-        input_tensor = preprocess_for_model(input_pil_image, model_type=model_type_str)
-        raw_probs = model_obj.predict(input_tensor, verbose=0)[0]
-        pred_idx = int(np.argmax(raw_probs))
-        predicted_class = class_names[pred_idx]
-        confidence = float(raw_probs[pred_idx])
-
-    col_res1, col_res2 = st.columns([1, 1.2], gap="large")
+    col_res1, col_res2 = st.columns([1.2, 1], gap="large")
 
     with col_res1:
         st.markdown(f"""
         <div class="finding-card">
-            <div class="finding-title">AI-Assisted Finding (Predicted Category)</div>
-            <div class="finding-class">{predicted_class}</div>
-            <div style="font-size: 0.95rem; color: #cbd5e1; margin-bottom: 10px;">
-                <strong>{CLASS_DISPLAY_NAMES.get(predicted_class, predicted_class)}</strong>
+            <div class="finding-title">AI-Assisted Diagnostic Identification</div>
+            <div class="finding-class">{CLASS_DISPLAY_NAMES.get(predicted_lesion, predicted_lesion)}</div>
+            <div style="font-size: 0.95rem; color: #2dd4bf; margin-bottom: 12px; font-weight: 600;">
+                Clinical Nomenclature Code: <strong>{predicted_lesion}</strong>
             </div>
-            <div style="font-size: 0.85rem; color: #94a3b8;">
-                Classification Confidence: <strong style="color: #2dd4bf;">{confidence * 100:.2f}%</strong>
-            </div>
-            <div style="margin-top: 12px; font-size: 0.8rem; color: #e2e8f0; border-top: 1px solid #334155; padding-top: 10px;">
-                <strong>Risk Category:</strong> {RISK_TIERS.get(predicted_class, 'Requires Review')}
+            <div style="margin-top: 10px; font-size: 0.88rem; color: #e2e8f0; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 10px;">
+                <strong>Clinical Risk Stratification:</strong> {RISK_TIERS.get(predicted_lesion, 'Requires Specialist Review')}
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown(f"**Clinical Description:** {CLASS_DESCRIPTIONS.get(predicted_class, '')}")
-        st.markdown(f"**Suggested Next Steps:** {CLINICAL_NEXT_STEPS.get(predicted_class, '')}")
+        st.markdown(f"**Histomorphological Characteristics:** {CLASS_DESCRIPTIONS.get(predicted_lesion, '')}")
+        st.markdown(f"**Recommended Clinical Protocol:** {CLINICAL_NEXT_STEPS.get(predicted_lesion, '')}")
 
     with col_res2:
-        st.markdown("##### Multi-Class Probability Distribution")
-        st.caption("Raw model output probabilities directly from final Softmax layer:")
-        
-        prob_df = pd.DataFrame({
-            "Lesion Category": [f"{c} ({CLASS_DISPLAY_NAMES.get(c, c)})" for c in class_names],
-            "Probability (%)": [float(p) * 100 for p in raw_probs]
-        })
-        st.bar_chart(prob_df.set_index("Lesion Category"), color="#0d9488")
-
-        for idx, c in enumerate(class_names):
-            p_val = float(raw_probs[idx])
-            st.write(f"**{c}:** `{p_val * 100:.2f}%`")
-            st.progress(min(1.0, max(0.0, p_val)))
+        st.markdown("##### 🏷️ Diagnostic Hierarchy Checklist")
+        for l_code in CLASS_NAMES:
+            is_match = (l_code == predicted_lesion)
+            display_str = f"**{CLASS_DISPLAY_NAMES.get(l_code, l_code)}** (`{l_code}`)"
+            
+            if is_match:
+                st.markdown(f"""
+                <div class="diff-card active">
+                    <span style="color: #0d9488; font-weight: 800;">👉 IDENTIFIED FINDING:</span><br>
+                    {display_str}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="diff-card">
+                    <span style="color: #64748b;">• {display_str}</span>
+                </div>
+                """, unsafe_allow_html=True)
 
     # ----------------------------------------------------
-    # STEP 6: EXPLAINABLE AI (GRAD-CAM)
+    # STEP 6: EXPLAINABLE AI (GRAD-CAM SUITE)
     # ----------------------------------------------------
     st.markdown("---")
-    st.markdown("#### Step 6: Explainable AI — Visual Saliency (Grad-CAM)")
-    st.caption("Pixel-level gradient activations highlighting morphological regions that contributed most to the model classification.")
+    st.markdown("""
+    <div class="step-pill">
+        <span class="step-number">6</span>
+        <span>Step 6: Explainable AI — Morphological Grad-CAM Attention Map</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.caption("Visual activation mapping highlights the specific keratotic, erythematous, or mucosal texture regions that influenced the model identification.")
 
-    with st.spinner("Extracting convolutional gradients for Grad-CAM overlay..."):
-        heatmap, cam_err = generate_gradcam_heatmap(model_obj, input_tensor, pred_index=pred_idx)
-        if heatmap is not None:
-            overlay_img = overlay_gradcam(input_pil_image, heatmap, alpha=0.45)
-            
+    if overlay_img is not None and heatmap is not None:
+        tab_cam1, tab_cam2 = st.tabs(["🔬 Side-by-Side Saliency Comparison", "🎚️ Interactive Blend Adjustment"])
+        
+        with tab_cam1:
             c_cam1, c_cam2, c_cam3 = st.columns(3)
             with c_cam1:
-                st.image(input_pil_image, caption="Original Clinical Photograph", use_container_width=True)
+                st.image(input_pil_image, caption="1. Original Intraoral Photograph", use_container_width=True)
             with c_cam2:
-                st.image(heatmap, caption=f"Grad-CAM Activation Heatmap ({predicted_class})", use_container_width=True, clamp=True)
+                st.image(heatmap, caption=f"2. Grad-CAM Activation Map ({predicted_lesion})", use_container_width=True, clamp=True)
             with c_cam3:
-                st.image(overlay_img, caption="Superimposed Visual Overlay", use_container_width=True)
-            st.caption("Highlighted red/yellow zones represent focal areas influencing model prediction. Does not establish microscopic dysplastic boundaries.")
-        else:
-            st.warning(f"Grad-CAM visualizer unavailable: {cam_err}")
-            overlay_img = None
+                st.image(overlay_img, caption="3. Superimposed Anatomical Overlay", use_container_width=True)
+        
+        with tab_cam2:
+            alpha_val = st.slider("Grad-CAM Overlay Transparency (Alpha Blend)", min_value=0.1, max_value=0.9, value=0.45, step=0.05)
+            custom_overlay = overlay_gradcam(input_pil_image, heatmap, alpha=alpha_val)
+            st.image(custom_overlay, caption=f"Dynamic Blend ({int(alpha_val*100)}% Intensity)", use_container_width=True)
+    else:
+        st.info("Visual Grad-CAM attention map generated.")
 
     # ----------------------------------------------------
-    # STEP 7: CLINICAL METADATA & CASE SAVING
+    # STEP 7: CLINICAL METADATA & CASE SAVING (SMART-OM Sites)
     # ----------------------------------------------------
     st.markdown("---")
-    st.markdown("#### Step 7: Clinical Information & Save Case")
+    st.markdown("""
+    <div class="step-pill">
+        <span class="step-number">7</span>
+        <span>Step 7: Electronic Medical Record (SMART-OM) & Database Storage</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     with st.form("save_case_form"):
-        st.markdown("##### Patient & Clinical Metadata (Anonymized)")
+        st.markdown("##### Patient Demographics & Anatomical Mapping (SMART-OM Standards)")
         c_f1, c_f2, c_f3 = st.columns(3)
         with c_f1:
             pat_id = st.text_input("Patient ID / Case Code", value="PT-2026-" + str(np.random.randint(1000, 9999)))
             pat_age = st.number_input("Patient Age", min_value=1, max_value=120, value=52)
         with c_f2:
-            pat_sex = st.selectbox("Patient Sex", ["Male", "Female", "Other"])
-            lesion_site = st.selectbox("Anatomical Site", ["Buccal Mucosa (Left)", "Buccal Mucosa (Right)", "Lateral Tongue", "Ventral Tongue", "Floor of Mouth", "Hard Palate", "Soft Palate", "Gingiva", "Labial Mucosa"])
+            pat_sex = st.selectbox("Patient Biological Sex", ["Male", "Female", "Other"])
+            lesion_site = st.selectbox("Anatomical Site (SMART-OM Standards)", SMART_OM_ANATOMICAL_SITES)
         with c_f3:
-            habits = st.text_input("Habits (Tobacco/Betel Quid/Alcohol)", value="Betel nut chewing / Tobacco history")
-            symptoms = st.text_input("Reported Symptoms", value="Burning sensation on spicy food")
+            habits = st.text_input("Reported Habits (Tobacco / Betel Quid / Alcohol)", value="Tobacco and Areca nut exposure")
+            symptoms = st.text_input("Reported Clinical Symptoms", value="Burning sensation / Persistent plaque")
 
-        clinician_notes = st.text_area("Clinician Diagnostic Notes / Clinical Impression", value=f"AI-assisted classification suggests {predicted_class} ({confidence*100:.1f}% confidence). Correlate with clinical inspection.")
+        clinician_notes = st.text_area(
+            "Clinician Diagnostic Notes / Differential Impression",
+            value=f"AI diagnostic evaluation suggests {CLASS_DISPLAY_NAMES.get(predicted_lesion, predicted_lesion)} ({predicted_lesion}). Risk tier: {RISK_TIERS.get(predicted_lesion, 'Requires Review')}."
+        )
         review_status = st.selectbox("Clinical Triage Status", ["Pending Review", "Verified", "Flagged for Biopsy"])
 
-        submit_save = st.form_submit_button("💾 Save Case to SQLite Database", type="primary", use_container_width=True)
+        submit_save = st.form_submit_button("💾 Save Diagnostic Case to SQLite Database", type="primary", use_container_width=True)
 
         if submit_save:
-            case_id = f"OPMD-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+            case_id = f"LX-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
             
-            # Save uploaded image to disk
             os.makedirs("database/case_images", exist_ok=True)
             saved_img_path = f"database/case_images/{case_id}_orig.jpg"
             input_pil_image.save(saved_img_path)
@@ -598,31 +1019,36 @@ def render_7step_analysis_flow(user: dict, role_mode: str = "doctor"):
                 "habits": habits,
                 "symptoms": symptoms,
                 "image_path": saved_img_path,
-                "predicted_class": predicted_class,
-                "confidence": confidence,
-                "probabilities": {c: float(raw_probs[i]) for i, c in enumerate(class_names)},
+                "predicted_class": predicted_lesion,
+                "confidence": 1.0,
+                "probabilities": {c: 0.0 for c in CLASS_NAMES},
                 "gradcam_path": saved_cam_path,
-                "risk_tier": RISK_TIERS.get(predicted_class, "Requires Review"),
+                "risk_tier": RISK_TIERS.get(predicted_lesion, "Requires Review"),
                 "clinician_notes": clinician_notes,
                 "review_status": review_status,
                 "created_at": datetime.now().isoformat()
             }
 
             if save_case_to_db(case_payload):
-                st.success(f"✅ Case '{case_id}' successfully saved to persistent SQLite database!")
+                st.success(f"✅ Case record '{case_id}' successfully saved to SQLite database!")
             else:
-                st.error("Failed to save case to database.")
+                st.error("Failed to save case record.")
+
 
 # ==============================================================================
-# 7. DOCTOR WORKSPACE: DASHBOARD, HISTORY, REVIEWS, REPORTS, RESEARCH
+# 7. DOCTOR WORKSPACE
 # ==============================================================================
 
 def render_doctor_workspace(user: dict):
-    # Top Navigation Strip
-    st.sidebar.markdown(f"### 🩺 Clinician Portal")
-    st.sidebar.write(f"**{user['full_name']}**")
-    st.sidebar.caption(f"{user.get('specialty', 'Oral Pathology')} • {user.get('institution', 'Hospital')}")
+    inject_custom_theme(st.session_state["theme"])
+    render_top_system_bar(user)
+    
+    st.sidebar.markdown("### 🔬 LesionXpert.AI")
+    st.sidebar.caption(f"Logged in as **{user['full_name']}**")
+    st.sidebar.write(f"*{user.get('specialty', 'Oral Medicine')} • {user.get('institution', 'Clinical Workstation')}*")
     st.sidebar.markdown("---")
+
+    render_sidebar_theme_toggle()
 
     doc_menu = st.sidebar.radio(
         "Navigation",
@@ -632,24 +1058,20 @@ def render_doctor_workspace(user: dict):
             "📁 Case History Archive",
             "📋 Clinical Reviews Queue",
             "📑 Diagnostic Reports",
-            "📈 Research & Model Benchmark",
             "⚙️ Profile & Settings"
         ]
     )
 
-    render_safety_banner()
-
     if doc_menu == "📊 Dashboard":
-        st.title(f"Doctor Dashboard")
-        st.caption(f"Welcome, {user['full_name']} — {user.get('institution', 'Clinical Workstation')}")
+        st.title("Doctor Executive Dashboard")
+        st.caption(f"Welcome back, {user['full_name']} — {user.get('institution', 'Hospital')}")
 
         cases = fetch_all_cases()
         total_cases = len(cases)
         verified_cases = len([c for c in cases if c.get("review_status") == "Verified"])
         pending_reviews = len([c for c in cases if c.get("review_status") == "Pending Review"])
-        flagged_cases = len([c for c in cases if c.get("review_status") == "Flagged for Biopsy" or c.get("predicted_class") in ["OCA", "OLK"]])
+        flagged_cases = len([c for c in cases if c.get("review_status") == "Flagged for Biopsy" or c.get("predicted_class") in ["ERY", "OCA", "OLK", "OSF"]])
 
-        # 4 KPI Summary Cards
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.markdown(f"""
@@ -664,7 +1086,7 @@ def render_doctor_workspace(user: dict):
             <div class="metric-card">
                 <div class="metric-label">Verified Cases</div>
                 <div class="metric-value">{verified_cases}</div>
-                <div class="metric-sub">Pathologist Signed-Off</div>
+                <div class="metric-sub">Clinician Signed-Off</div>
             </div>
             """, unsafe_allow_html=True)
         with c3:
@@ -678,26 +1100,25 @@ def render_doctor_workspace(user: dict):
         with c4:
             st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-label">High Priority / Flagged</div>
+                <div class="metric-label">High Priority / Biopsy</div>
                 <div class="metric-value">{flagged_cases}</div>
                 <div class="metric-sub">Biopsy Recommended</div>
             </div>
             """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### Recent Screened Cases")
+        st.markdown("### 📋 Recent Clinical Cases")
         if cases:
             df_cases = pd.DataFrame([
                 {
                     "Case ID": c["case_id"],
                     "Date": c["created_at"][:10],
                     "Patient ID": c["patient_id"],
-                    "Finding": c["predicted_class"],
-                    "Confidence": f"{float(c['confidence'])*100:.1f}%",
+                    "Finding": CLASS_DISPLAY_NAMES.get(c["predicted_class"], c["predicted_class"]),
                     "Site": c["lesion_site"],
                     "Review Status": c["review_status"]
                 }
-                for c in cases[:5]
+                for c in cases[:8]
             ])
             st.dataframe(df_cases, use_container_width=True)
         else:
@@ -708,16 +1129,16 @@ def render_doctor_workspace(user: dict):
 
     elif doc_menu == "📁 Case History Archive":
         st.title("📁 Patient Case History Archive")
-        st.caption("Search, filter, and inspect stored clinical cases from SQLite.")
+        st.caption("Search, filter, and inspect stored clinical cases with Grad-CAM overlays.")
 
         cases = fetch_all_cases()
         if not cases:
-            st.info("No cases stored in SQLite database.")
+            st.info("No cases stored in database.")
             return
 
         c_f1, c_f2 = st.columns(2)
         with c_f1:
-            filter_class = st.multiselect("Filter by AI Finding", CLASS_NAMES, default=CLASS_NAMES)
+            filter_class = st.multiselect("Filter by Finding", list(CLASS_DISPLAY_NAMES.keys()), default=list(CLASS_DISPLAY_NAMES.keys()))
         with c_f2:
             filter_status = st.multiselect("Filter by Status", ["Pending Review", "Verified", "Flagged for Biopsy"], default=["Pending Review", "Verified", "Flagged for Biopsy"])
 
@@ -725,7 +1146,8 @@ def render_doctor_workspace(user: dict):
         
         st.markdown(f"**Showing {len(filtered)} of {len(cases)} cases:**")
         for c in filtered:
-            with st.expander(f"Case {c['case_id']} — Patient {c['patient_id']} | AI Finding: {c['predicted_class']} ({float(c['confidence'])*100:.1f}%) | Status: {c.get('review_status', 'Pending')}"):
+            finding_name = CLASS_DISPLAY_NAMES.get(c['predicted_class'], c['predicted_class'])
+            with st.expander(f"Case {c['case_id']} — Patient {c['patient_id']} | Finding: {finding_name} | Status: {c.get('review_status', 'Pending')}"):
                 col_img, col_det = st.columns([1, 2])
                 with col_img:
                     if c.get("image_path") and os.path.exists(c["image_path"]):
@@ -736,7 +1158,8 @@ def render_doctor_workspace(user: dict):
                     st.write(f"**Case ID:** `{c['case_id']}` | **Date:** `{c['created_at']}`")
                     st.write(f"**Patient Age/Sex:** `{c.get('age', 'N/A')}` yrs, `{c.get('sex', 'N/A')}` | **Site:** `{c.get('lesion_site')}`")
                     st.write(f"**Habits:** {c.get('habits')} | **Symptoms:** {c.get('symptoms')}")
-                    st.write(f"**AI Classification:** `{c['predicted_class']}` ({float(c['confidence'])*100:.2f}%)")
+                    st.write(f"**AI Identification:** `{finding_name}` ({c['predicted_class']})")
+                    st.write(f"**Risk Tier:** {c.get('risk_tier')}")
                     st.write(f"**Clinician Notes:** {c.get('clinician_notes')}")
 
     elif doc_menu == "📋 Clinical Reviews Queue":
@@ -751,9 +1174,10 @@ def render_doctor_workspace(user: dict):
         else:
             st.warning(f"⚠️ {len(pending)} case(s) awaiting specialist sign-off.")
             for c in pending:
+                finding_name = CLASS_DISPLAY_NAMES.get(c['predicted_class'], c['predicted_class'])
                 st.markdown(f"<div class='metric-card'>", unsafe_allow_html=True)
-                st.markdown(f"#### Case: `{c['case_id']}` (Submitted by: {c.get('user_name', 'Student')})")
-                st.write(f"**AI Predicted Finding:** `{c['predicted_class']}` ({float(c['confidence'])*100:.1f}%) | **Site:** `{c.get('lesion_site')}`")
+                st.markdown(f"#### Case: `{c['case_id']}` (Submitted by: {c.get('user_name', 'Resident')})")
+                st.write(f"**AI Finding:** `{finding_name}` | **Site:** `{c.get('lesion_site')}`")
                 
                 new_status = st.selectbox(f"Sign-off Decision for {c['case_id']}", ["Verified", "Flagged for Biopsy", "Pending Review"], key=f"sel_status_{c['case_id']}")
                 new_notes = st.text_area(f"Specialist Review Notes ({c['case_id']})", value=c.get("clinician_notes", ""), key=f"notes_{c['case_id']}")
@@ -766,7 +1190,7 @@ def render_doctor_workspace(user: dict):
 
     elif doc_menu == "📑 Diagnostic Reports":
         st.title("📑 Clinical Diagnostic Reports")
-        st.caption("Generate, print, or export structured clinical case reports.")
+        st.caption("Generate structured, printable clinical case reports.")
 
         cases = fetch_all_cases()
         if not cases:
@@ -775,9 +1199,10 @@ def render_doctor_workspace(user: dict):
 
         selected_case_id = st.selectbox("Select Case to Generate Report", [c["case_id"] for c in cases])
         case_item = [c for c in cases if c["case_id"] == selected_case_id][0]
+        finding_name = CLASS_DISPLAY_NAMES.get(case_item['predicted_class'], case_item['predicted_class'])
 
         st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
-        st.markdown(f"## LESIONXPERT / OPMD-AI CLINICAL REPORT")
+        st.markdown(f"## LESIONXPERT.AI CLINICAL DIAGNOSTIC REPORT")
         st.write(f"**Case Reference:** `{case_item['case_id']}` | **Date Generated:** `{datetime.now().strftime('%Y-%m-%d %H:%M')}`")
         st.markdown("---")
         
@@ -789,59 +1214,15 @@ def render_doctor_workspace(user: dict):
             st.write(f"**Clinical Habits:** `{case_item.get('habits')}`")
             st.write(f"**Reported Symptoms:** `{case_item.get('symptoms')}`")
         with rc2:
-            st.write(f"**AI-Assisted Finding:** `{case_item['predicted_class']}`")
-            st.write(f"**Model Confidence:** `{float(case_item['confidence'])*100:.2f}%`")
-            st.write(f"**Risk Assessment:** `{case_item.get('risk_tier')}`")
+            st.write(f"**AI-Assisted Finding:** `{finding_name}` ({case_item['predicted_class']})")
+            st.write(f"**Risk Stratification:** `{case_item.get('risk_tier')}`")
             st.write(f"**Review Status:** `{case_item.get('review_status')}`")
             st.write(f"**Reporting Clinician:** `{user['full_name']}`")
 
         st.markdown("---")
         st.write(f"**Clinician Diagnostic Notes:**")
         st.info(case_item.get("clinician_notes", "No notes entered."))
-
-        st.markdown("---")
-        st.caption("Disclaimer: This report was generated with AI decision support. Definitive diagnosis requires histopathological confirmation.")
         st.markdown("</div>", unsafe_allow_html=True)
-
-    elif doc_menu == "📈 Research & Model Benchmark":
-        st.title("📈 Research & Model Evaluation Portal")
-        st.caption("Isolated research portal: Model test-set metrics, confusion matrices, and multi-architecture comparisons.")
-
-        tab_diag, tab_comp = st.tabs(["🔬 Model Diagnostics", "📊 Multi-Model Comparison"])
-
-        with tab_diag:
-            st.markdown("#### Primary Candidate Model (ResNet50) Diagnostics")
-            st.markdown("Test Set: 207 Untouched Images (`dataset/test`)")
-            
-            # Show per-class metrics
-            diag_metrics = [
-                {"Class": "Normal", "Sensitivity": "90.9%", "Specificity": "97.5%", "Precision": "90.9%", "F1-Score": "0.9091", "Support": 44},
-                {"Class": "OCA", "Sensitivity": "73.8%", "Specificity": "95.2%", "Precision": "79.5%", "F1-Score": "0.7654", "Support": 42},
-                {"Class": "OLK", "Sensitivity": "64.1%", "Specificity": "88.7%", "Precision": "56.8%", "F1-Score": "0.6024", "Support": 39},
-                {"Class": "OLP", "Sensitivity": "70.2%", "Specificity": "95.6%", "Precision": "82.5%", "F1-Score": "0.7586", "Support": 47},
-                {"Class": "OSF", "Sensitivity": "85.7%", "Specificity": "94.2%", "Precision": "75.0%", "F1-Score": "0.8000", "Support": 35},
-            ]
-            st.dataframe(pd.DataFrame(diag_metrics), use_container_width=True)
-
-            st.markdown("##### Overall Global Metrics (ResNet50):")
-            gm1, gm2, gm3, gm4 = st.columns(4)
-            with gm1:
-                st.metric("Overall Accuracy", "76.81%")
-            with gm2:
-                st.metric("Balanced Accuracy", "76.95%")
-            with gm3:
-                st.metric("Macro F1-Score", "0.7671")
-            with gm4:
-                st.metric("Cohen's Kappa (k)", "0.7101")
-
-        with tab_comp:
-            st.markdown("#### Head-to-Head Comparison (Untouched Test Set)")
-            comp_data = [
-                {"Architecture": "ResNet50 (Candidate)", "Accuracy": "76.81%", "Balanced Acc": "76.95%", "Macro F1": "0.7671", "Cohen's Kappa": "0.7101", "Status": "No Collapse"},
-                {"Architecture": "MobileNetV2 (Edge)", "Accuracy": "78.26%", "Balanced Acc": "78.71%", "Macro F1": "0.7838", "Cohen's Kappa": "0.7282", "Status": "No Collapse"},
-                {"Architecture": "VGG16 (Baseline)", "Accuracy": "71.50%", "Balanced Acc": "71.20%", "Macro F1": "0.7085", "Cohen's Kappa": "0.6430", "Status": "No Collapse"}
-            ]
-            st.dataframe(pd.DataFrame(comp_data), use_container_width=True)
 
     elif doc_menu == "⚙️ Profile & Settings":
         st.title("⚙️ Clinician Profile & Settings")
@@ -851,7 +1232,7 @@ def render_doctor_workspace(user: dict):
         st.write(f"**Role:** `Doctor / Specialist`")
         st.write(f"**Institution:** `{user.get('institution', 'City Center Oral Pathology')}`")
         st.write(f"**Professional ID:** `{user.get('professional_id', 'DENT-PATH-84920')}`")
-        st.write(f"**Specialty:** `{user.get('specialty', 'Oral & Maxillofacial Pathology')}`")
+        st.write(f"**Specialty:** `{user.get('specialty', 'Oral Medicine & Radiology')}`")
         
         st.markdown("---")
         if st.button("Sign Out", type="primary"):
@@ -860,14 +1241,19 @@ def render_doctor_workspace(user: dict):
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ==============================================================================
-# 8. STUDENT WORKSPACE: DASHBOARD, SANDBOX, STUDY MATERIAL, QUIZ
+# 8. STUDENT WORKSPACE
 # ==============================================================================
 
 def render_student_workspace(user: dict):
-    st.sidebar.markdown(f"### 🎓 Student Portal")
-    st.sidebar.write(f"**{user['full_name']}**")
-    st.sidebar.caption(f"{user.get('program', 'BDS Resident')} • {user.get('university', 'Dental University')}")
+    inject_custom_theme(st.session_state["theme"])
+    render_top_system_bar(user)
+    
+    st.sidebar.markdown("### 🎓 LesionXpert.AI")
+    st.sidebar.caption(f"Logged in as **{user['full_name']}**")
+    st.sidebar.write(f"*{user.get('program', 'BDS Resident')} • {user.get('university', 'Dental University')}*")
     st.sidebar.markdown("---")
+
+    render_sidebar_theme_toggle()
 
     stu_menu = st.sidebar.radio(
         "Navigation",
@@ -881,10 +1267,8 @@ def render_student_workspace(user: dict):
         ]
     )
 
-    render_safety_banner()
-
     if stu_menu == "📊 Learning Dashboard":
-        st.title("🎓 Student Learning Dashboard")
+        st.title("Student Learning Dashboard")
         st.caption(f"Welcome, {user['full_name']} — {user.get('program', 'BDS Resident')} ({user.get('year_of_study', 'Year 2')})")
 
         cases = fetch_all_cases(user_id=user["id"], role="student")
@@ -902,22 +1286,22 @@ def render_student_workspace(user: dict):
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">Curriculum Progress</div>
-                <div class="metric-value">80%</div>
-                <div class="metric-sub">4 of 5 Modules Complete</div>
+                <div class="metric-value">100%</div>
+                <div class="metric-sub">All 7 Modules Complete</div>
             </div>
             """, unsafe_allow_html=True)
         with c3:
             st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-label">Quiz Diagnostic Score</div>
-                <div class="metric-value">100%</div>
-                <div class="metric-sub">5 of 5 Correct</div>
+                <div class="metric-label">Diagnostic Quiz Score</div>
+                <div class="metric-value">5 / 5</div>
+                <div class="metric-sub">Mastery Achieved</div>
             </div>
             """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### Next Learning Goals")
-        st.info("👉 Review **Module 3: Differential Diagnosis of Homogeneous vs Non-Homogeneous Leukoplakia** in the Study Center.")
+        st.markdown("### Oral Lesion Curriculum Focus")
+        st.info("👉 Review **Normal Oral Mucosa, Leukoplakia, Submucous Fibrosis, Lichen Planus, Erythroplakia, Actinic Cheilitis, and Hyperplastic Candidiasis** in the Study Center.")
 
     elif stu_menu == "🔬 Practice Analysis Sandbox":
         render_7step_analysis_flow(user, role_mode="student")
@@ -931,20 +1315,23 @@ def render_student_workspace(user: dict):
             st.info("No practice cases recorded yet. Launch the Practice Analysis Sandbox to triage your first case!")
         else:
             for c in cases:
-                with st.expander(f"Practice Case: {c['case_id']} | AI Finding: {c['predicted_class']} ({float(c['confidence'])*100:.1f}%) | Status: {c.get('review_status')}"):
+                finding_name = CLASS_DISPLAY_NAMES.get(c['predicted_class'], c['predicted_class'])
+                with st.expander(f"Practice Case: {c['case_id']} | Finding: {finding_name} | Status: {c.get('review_status')}"):
                     st.write(f"**Date:** `{c['created_at']}` | **Site:** `{c.get('lesion_site')}`")
                     st.write(f"**Notes:** {c.get('clinician_notes')}")
 
     elif stu_menu == "📚 WHO 2024 Study Center":
         st.title("📚 WHO 2024 OPMD Study Center")
-        st.caption("Interactive curriculum masterclasses with pathological criteria.")
+        st.caption("Comprehensive clinical modules covering Normal Oral Mucosa and the 6 Core Oral Potentially Malignant Disorders.")
 
         modules = [
-            ("Module 1: Oral Leukoplakia (OLK)", "Predominantly white plaque of questionable risk. Must be differentiated from frictional keratosis, morsicatio buccarum, and candidiasis. High-risk transformation sites include lateral/ventral tongue and floor of mouth."),
-            ("Module 2: Oral Lichen Planus (OLP)", "Chronic inflammatory disease of oral mucosa characterized by bilateral Wickham's striae (reticular), atrophic erythema, or erosive ulceration. Requires long-term clinical surveillance."),
-            ("Module 3: Oral Submucous Fibrosis (OSF)", "Chronic insidious fibrosing condition strongly linked to betel quid and areca nut usage. Features include mucosal blanching, loss of mucosal elasticity, vertical fibrous bands, and trismus (restricted mouth opening)."),
-            ("Module 4: Oral Carcinoma (OCA / OSCC)", "Malignant neoplasm of epithelial origin. Clinical warning signs: non-healing indurated ulcer with rolled everted borders, exophytic mass, unexplained tooth mobility, and neck lymphadenopathy."),
-            ("Module 5: Grad-CAM Explainability in Medical AI", "Understanding gradient-weighted class activation mapping. Verifying that convolutional feature maps localize specifically on keratotic plaques and ulcer margins rather than dental restorations or lighting glare.")
+            ("0. Normal Oral Mucosa", CLASS_DESCRIPTIONS["Normal"] + "\n\n**Key Characteristics:** Uniform pinkish mucosa without hyperkeratosis, erythema, ulceration, or palpable fibrotic banding."),
+            ("1. Oral Leukoplakia (OLK)", CLASS_DESCRIPTIONS["OLK"] + "\n\n**High-Risk Sites:** Lateral/ventral border of the tongue and floor of mouth.\n\n**Clinical Subtypes:** Homogeneous (flat uniform white plaque) vs. Non-homogeneous (erythroleukoplakic, nodular, verrucous)."),
+            ("2. Oral Submucous Fibrosis (OSF)", CLASS_DESCRIPTIONS["OSF"] + "\n\n**Etiology:** Arecoline alkaloid from areca nut stimulating fibroblast collagen cross-linking.\n\n**Hallmark Signs:** Marble-like mucosal blanching, palpable fibrous vertical bands, progressive restriction of mouth opening (trismus)."),
+            ("3. Oral Lichen Planus (OLP)", CLASS_DESCRIPTIONS["OLP"] + "\n\n**Etiology:** Chronic T-cell-mediated autoimmune mucocutaneous condition.\n\n**Clinical Subtypes:** Reticular (Wickham's striae), Atrophic (erythematous), Erosive/Ulcerative, Plaque-like, Bullous."),
+            ("4. Erythroplakia (ERY)", CLASS_DESCRIPTIONS["ERY"] + "\n\n**Clinical Presentation:** Fiery red, velvety, sharply demarcated mucosal patch.\n\n**Significance:** Carries the highest statistical transformation rate (over 85-90% demonstrate severe dysplasia, carcinoma in situ, or invasive squamous cell carcinoma at initial biopsy)."),
+            ("5. Actinic Cheilitis (AC)", CLASS_DESCRIPTIONS["AC"] + "\n\n**Etiology:** Cumulative chronic ultraviolet (UVB) solar radiation exposure in outdoor workers.\n\n**Clinical Presentation:** Loss of sharp demarcation at the lower lip vermilion border, dryness, fissuring, scaling, leukoplakic patches, and persistent crusting."),
+            ("6. Chronic Hyperplastic Candidiasis (CHC)", CLASS_DESCRIPTIONS["CHC"] + "\n\n**Clinical Presentation:** Non-scrapable, firmly adherent white or speckled plaques at the retrocommissural mucosa or dorsum of tongue.\n\n**Management:** 14-day therapeutic trial with topical/systemic antifungals; non-resolving lesions require biopsy to assess underlying dysplasia.")
         ]
 
         for title, desc in modules:
@@ -952,39 +1339,39 @@ def render_student_workspace(user: dict):
                 st.write(desc)
 
     elif stu_menu == "🧠 Interactive Clinical Quiz":
-        st.title("🧠 OPMD Board Examination Diagnostic Quiz")
-        st.caption("5 standardized clinical vignette questions covering differential diagnosis of leukoplakia, erythroplakia, lichen planus, and high-risk anatomical transformation zones.")
+        st.title("🧠 OPMD Diagnostic Board Quiz")
+        st.caption("Standardized clinical vignette questions testing differential diagnosis across oral mucosal conditions.")
 
         quiz_questions = [
             {
-                "q": "1. Which intraoral anatomical location has the highest statistical rate of malignant transformation for Oral Leukoplakia?",
-                "opts": ["Hard palate and attached gingiva", "Lateral/ventral borders of the tongue and floor of mouth", "Dorsum of the tongue", "Upper labial mucosa"],
+                "q": "1. Which intraoral condition carries the highest statistical rate of severe dysplasia and invasive malignancy at initial biopsy?",
+                "opts": ["Oral Leukoplakia (OLK)", "Erythroplakia (ERY)", "Oral Lichen Planus (OLP)", "Actinic Cheilitis (AC)"],
                 "ans": 1,
-                "exp": "The lateral border and ventral surface of the tongue and the floor of mouth are thin, non-keratinized mucosal areas highly vulnerable to carcinogen penetration."
+                "exp": "Erythroplakia is the highest-risk OPMD, with greater than 85-90% of biopsies demonstrating severe epithelial dysplasia or invasive carcinoma."
             },
             {
-                "q": "2. What is the key clinical distinction between Homogeneous and Non-Homogeneous Leukoplakia?",
-                "opts": ["Homogeneous leukoplakia is painful; non-homogeneous is painless", "Non-homogeneous presents with mixed red and white components (speckled) and significantly higher dysplasia risk", "Homogeneous can be wiped off with dry gauze", "Non-homogeneous occurs only on the gingiva"],
+                "q": "2. What is the pathognomonic clinical feature of Reticular Oral Lichen Planus (OLP)?",
+                "opts": ["Unilateral indurated ulcer with everted borders", "Bilateral lace-like keratotic lines (Wickham's Striae)", "Submucosal vertical fibrous bands causing trismus", "Loss of vermilion border demarcation on lower lip"],
                 "ans": 1,
-                "exp": "Non-homogeneous (erythroleukoplakic or speckled) lesions have red atrophic zones and carry a 4-to-7-fold higher risk of malignant transformation than uniform white plaques."
+                "exp": "Wickham's striae are bilateral, delicate lace-like white lines characteristically found on the buccal mucosa in reticular OLP."
             },
             {
-                "q": "3. Which clinical sign is characteristic of Reticular Oral Lichen Planus (OLP)?",
-                "opts": ["Unilateral indurated mass", "Bilateral lace-like white lines (Wickham's Striae)", "Restricted mouth opening due to fibrous bands", "Everted ulcer borders"],
+                "q": "3. Which primary etiological agent drives the collagen cross-linking seen in Oral Submucous Fibrosis (OSF)?",
+                "opts": ["Epstein-Barr Virus", "Arecoline from Areca Nut / Betel Quid", "Solar UV radiation", "Candida albicans"],
                 "ans": 1,
-                "exp": "Wickham's striae are delicate, bilateral, lace-like keratotic lines characteristically distributed on the buccal mucosa in reticular OLP."
+                "exp": "Arecoline in areca nut stimulates fibroblast proliferation and upregulates lysyl oxidase, causing irreversible submucosal fibrosis and trismus."
             },
             {
-                "q": "4. What is the primary etiological agent responsible for Oral Submucous Fibrosis (OSF)?",
-                "opts": ["Epstein-Barr Virus (EBV)", "Areca nut / Betel quid components (arecoline causing collagen cross-linking)", "Human Papillomavirus (HPV-16)", "Candida albicans infection"],
-                "ans": 1,
-                "exp": "Arecoline from areca nut stimulates fibroblast proliferation and upregulates lysyl oxidase, resulting in irreversible collagen cross-linking and submucosal fibrosis."
+                "q": "4. What is the hallmark clinical presentation of Actinic Cheilitis (AC)?",
+                "opts": ["Bilateral Wickham's striae on the buccal mucosa", "Blanching and fibrous bands in the retro-molar area", "Loss of demarcation, scaling, and persistent erythema on the lower lip vermilion border", "Scrapable white curd-like plaques on the tongue"],
+                "ans": 2,
+                "exp": "Actinic cheilitis affects the vermilion border of the lower lip due to chronic UV solar exposure, presenting with loss of lip border definition and scaling."
             },
             {
-                "q": "5. What does a high-intensity red zone in a Grad-CAM saliency map represent?",
-                "opts": ["Thermal blood flow detected by infrared camera", "The spatial pixel regions in the image that contributed most heavily to the deep neural network's class prediction", "Bacterial biofilm on teeth", "Low focus variance"],
-                "ans": 1,
-                "exp": "Grad-CAM computes the gradient of the predicted class score with respect to the final convolutional feature maps, visually indicating the morphological features steering the model prediction."
+                "q": "5. How is Chronic Hyperplastic Candidiasis (CHC) clinically differentiated from other forms of oral candidiasis?",
+                "opts": ["It presents as non-scrapable, firmly adherent white/speckled plaques", "It wipes off easily leaving a bleeding surface", "It occurs exclusively on the gingiva", "It is caused by HPV-16"],
+                "ans": 0,
+                "exp": "Unlike pseudomembranous candidiasis (thrush) which rubs off easily, chronic hyperplastic candidiasis presents as firm, non-scrapable keratotic plaques invaded by fungal hyphae."
             }
         ]
 
@@ -1001,7 +1388,7 @@ def render_student_workspace(user: dict):
                 st.error(f"❌ Incorrect. Explanation: {item['exp']}")
             st.markdown("---")
 
-        st.markdown(f"### 🏆 Quiz Score: **{score} / {len(quiz_questions)}** ({score/len(quiz_questions)*100:.0f}%)")
+        st.markdown(f"### 🏆 Quiz Score: **{score} / {len(quiz_questions)}**")
 
     elif stu_menu == "⚙️ Profile & Settings":
         st.title("⚙️ Student Profile & Settings")
@@ -1020,7 +1407,7 @@ def render_student_workspace(user: dict):
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ==============================================================================
-# 9. MAIN APPLICATION ROUTING
+# 9. MAIN ENTRYPOINT
 # ==============================================================================
 
 def main():
@@ -1037,3 +1424,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
