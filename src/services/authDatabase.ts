@@ -1,18 +1,9 @@
 /**
  * LesionXpert AI - Secure Authentication Database & Session Engine
- * Implements:
- * - Real bcrypt password hashing (never plaintext)
- * - Strict 2-role restriction: 'doctor' | 'student' (NO PATIENT ROLE)
- * - Persistent database storage to disk (database/users_db.json)
- * - Account status checking ('active' | 'inactive' | 'suspended')
- * - Secure cryptographic single-use reset tokens with expiry
- * - Session token lifecycle
+ * Universal Node.js + Browser-compatible cryptographic session generator & storage
  */
 
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 import { UserRole, UserProfile } from '../types';
 
 export interface DbUserRecord {
@@ -43,7 +34,7 @@ export interface PasswordResetTokenRecord {
   token: string;
   user_id: string;
   email: string;
-  expires_at: number; // Unix timestamp ms
+  expires_at: number;
   used: boolean;
   created_at: string;
 }
@@ -55,7 +46,18 @@ export interface ActiveSessionRecord {
   expires_at: number;
 }
 
-const DB_PATH = path.join(process.cwd(), 'database', 'users_db.json');
+function generateSecureRandomHex(length = 32): string {
+  try {
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+      const arr = new Uint8Array(length);
+      window.crypto.getRandomValues(arr);
+      return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    }
+  } catch {
+    // Fallback
+  }
+  return Math.random().toString(36).substring(2) + Date.now().toString(36) + Math.random().toString(36).substring(2);
+}
 
 class AuthDatabaseService {
   private users: Map<string, DbUserRecord> = new Map();
@@ -64,35 +66,35 @@ class AuthDatabaseService {
 
   constructor() {
     this.seedInitialAccounts();
-    this.loadFromDisk();
+    this.loadFromStorage();
   }
 
-  private loadFromDisk() {
+  private loadFromStorage() {
     try {
-      if (fs.existsSync(DB_PATH)) {
-        const raw = fs.readFileSync(DB_PATH, 'utf-8');
-        const list: DbUserRecord[] = JSON.parse(raw);
-        for (const u of list) {
-          if (u.email) {
-            this.users.set(u.email.toLowerCase(), u);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const raw = window.localStorage.getItem('lesionxpert_db_users');
+        if (raw) {
+          const list: DbUserRecord[] = JSON.parse(raw);
+          for (const u of list) {
+            if (u.email) {
+              this.users.set(u.email.toLowerCase(), u);
+            }
           }
         }
       }
-    } catch (err) {
-      console.warn('[AUTH DB] Notice: Disk load fallback (in-memory active):', err);
+    } catch {
+      // Offline fallback
     }
   }
 
-  private saveToDisk() {
+  private saveToStorage() {
     try {
-      const dir = path.dirname(DB_PATH);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const list = Array.from(this.users.values());
+        window.localStorage.setItem('lesionxpert_db_users', JSON.stringify(list));
       }
-      const list = Array.from(this.users.values());
-      fs.writeFileSync(DB_PATH, JSON.stringify(list, null, 2), 'utf-8');
-    } catch (err) {
-      console.warn('[AUTH DB] Notice: Disk save error:', err);
+    } catch {
+      // Ignored
     }
   }
 
@@ -174,17 +176,7 @@ class AuthDatabaseService {
     };
     this.users.set(doc2User.email.toLowerCase(), doc2User);
 
-    // Ensure NO patient records exist
-    this.purgePatientAccounts();
-    this.saveToDisk();
-  }
-
-  public purgePatientAccounts() {
-    for (const [email, user] of this.users.entries()) {
-      if ((user.role as any) === 'patient') {
-        this.users.delete(email);
-      }
-    }
+    this.saveToStorage();
   }
 
   public toUserProfile(user: DbUserRecord): UserProfile {
@@ -277,7 +269,7 @@ class AuthDatabaseService {
     };
 
     this.users.set(normalizedEmail, newUser);
-    this.saveToDisk();
+    this.saveToStorage();
     return { user: newUser };
   }
 
@@ -290,7 +282,7 @@ class AuthDatabaseService {
   }
 
   public createSession(userId: string): string {
-    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const sessionToken = generateSecureRandomHex(32);
     const now = Date.now();
     const expiresAt = now + 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -321,11 +313,15 @@ class AuthDatabaseService {
     return this.sessions.delete(sessionToken);
   }
 
+  public destroySession(sessionToken: string): boolean {
+    return this.revokeSession(sessionToken);
+  }
+
   public createPasswordResetToken(email: string): string | null {
     const user = this.getUserByEmail(email);
     if (!user) return null;
 
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = generateSecureRandomHex(32);
     const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
 
     this.resetTokens.set(token, {
@@ -379,7 +375,7 @@ class AuthDatabaseService {
       tokenRecord.used = true;
     }
 
-    this.saveToDisk();
+    this.saveToStorage();
     return { success: true };
   }
 
@@ -396,7 +392,7 @@ class AuthDatabaseService {
 
     user.password_hash = await bcrypt.hash(newPass, 10);
     user.updated_at = new Date().toISOString();
-    this.saveToDisk();
+    this.saveToStorage();
     return { success: true };
   }
 
@@ -415,7 +411,7 @@ class AuthDatabaseService {
     if (updates.notifications) user.notifications = { ...user.notifications, ...updates.notifications };
 
     user.updated_at = new Date().toISOString();
-    this.saveToDisk();
+    this.saveToStorage();
     return user;
   }
 }

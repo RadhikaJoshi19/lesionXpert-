@@ -21,3 +21,7 @@ dist/
 # Python
 __pycache__/
 *.pyc
+
+# Local Backups & Runtime Case Images
+backups/
+database/case_images/

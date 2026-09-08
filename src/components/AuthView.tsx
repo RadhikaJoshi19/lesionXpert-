@@ -139,6 +139,10 @@ export const AuthView: React.FC<AuthViewProps> = ({
     const demoEmail = role === 'doctor' ? 'ananya.rao@opmd-clinic.com' : 'alex.chen@meduniv.edu';
     const demoPass = role === 'doctor' ? 'Doctor@2026!' : 'Student@2026!';
 
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    setSelectedRole(role);
+
     try {
       const res = await authClient.login(demoEmail, demoPass);
       if (res.success && res.user) {

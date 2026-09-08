@@ -1,0 +1,4 @@
+Architecture,Model File,Overall Accuracy (%),Balanced Accuracy (%),Macro F1-Score,Weighted F1-Score,Cohen's Kappa (k),Class Collapse Detected
+ResNet50,resnet50_opmd.keras,76.44,76.63,0.764,0.7654,0.7055,False
+MobileNetV2,mobilenetv2_opmd.keras,77.88,78.37,0.7805,0.7787,0.7233,False
+VGG16,vgg16_opmd.keras,62.5,62.25,0.6202,0.6213,0.5297,False
