@@ -64,6 +64,12 @@ if "current_analysis" not in st.session_state:
 if "webcam_accepted_image" not in st.session_state:
     st.session_state["webcam_accepted_image"] = None
 
+if "analysis_cache" not in st.session_state or not isinstance(st.session_state.get("analysis_cache"), dict):
+    st.session_state["analysis_cache"] = {}
+
+if "cam_image_buffer" not in st.session_state:
+    st.session_state["cam_image_buffer"] = None
+
 init_database()
 
 # ==============================================================================
@@ -102,6 +108,12 @@ def inject_custom_theme(theme_mode: str = "light"):
         
         expander_bg = "#1e293b"
         expander_border = "#334155"
+        expander_header_bg = "#0f172a"
+        expander_header_text = "#f8fafc"
+        
+        code_bg = "#131d31"
+        code_text = "#2dd4bf"
+        code_border = "#334155"
         
         pill_bg = "rgba(45, 212, 191, 0.15)"
         pill_text = "#2dd4bf"
@@ -123,7 +135,7 @@ def inject_custom_theme(theme_mode: str = "light"):
         input_border = "#cbd5e1"
         input_text = "#0f172a"
         
-        btn_sec_bg = "#f8fafc"
+        btn_sec_bg = "#ffffff"
         btn_sec_text = "#0f172a"
         btn_sec_border = "#cbd5e1"
         btn_sec_hover_bg = "#e2e8f0"
@@ -137,6 +149,12 @@ def inject_custom_theme(theme_mode: str = "light"):
         
         expander_bg = "#ffffff"
         expander_border = "#e2e8f0"
+        expander_header_bg = "#f8fafc"
+        expander_header_text = "#0f172a"
+        
+        code_bg = "#f1f5f9"
+        code_text = "#0d9488"
+        code_border = "#cbd5e1"
         
         pill_bg = "rgba(13, 148, 136, 0.12)"
         pill_text = "#0d9488"
@@ -144,11 +162,9 @@ def inject_custom_theme(theme_mode: str = "light"):
 
     st.markdown(f"""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
-        
         /* 1. Global Baseline & App Container */
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
             background-color: {bg_main} !important;
             color: {text_primary} !important;
         }}
@@ -168,20 +184,18 @@ def inject_custom_theme(theme_mode: str = "light"):
         [data-testid="stMarkdownContainer"] h5,
         [data-testid="stMarkdownContainer"] h6,
         .brand-title {{
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             font-weight: 700 !important;
             letter-spacing: -0.02em !important;
             color: {text_primary} !important;
         }}
 
         p, 
-        [data-testid="stMarkdownContainer"] p,
-        [data-testid="stMarkdownContainer"] span,
-        [data-testid="stMarkdownContainer"] li,
-        [data-testid="stMarkdownContainer"] ul,
-        [data-testid="stMarkdownContainer"] ol,
-        [data-testid="stMarkdownContainer"] strong,
-        [data-testid="stMarkdownContainer"] em {{
+        [data-testid="stMarkdownContainer"] > p,
+        [data-testid="stMarkdownContainer"] > span,
+        [data-testid="stMarkdownContainer"] > li,
+        [data-testid="stMarkdownContainer"] > ul,
+        [data-testid="stMarkdownContainer"] > ol {{
             color: {text_primary} !important;
         }}
 
@@ -190,6 +204,24 @@ def inject_custom_theme(theme_mode: str = "light"):
         [data-testid="stCaptionContainer"] p {{
             color: {text_secondary} !important;
             font-weight: 500 !important;
+        }}
+
+        /* Code snippets & Technical labels */
+        code,
+        [data-testid="stMarkdownContainer"] code,
+        p code,
+        span code,
+        li code,
+        div code {{
+            background-color: {code_bg} !important;
+            color: {code_text} !important;
+            border: 1px solid {code_border} !important;
+            padding: 2px 7px !important;
+            border-radius: 6px !important;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+            font-size: 0.88em !important;
+            font-weight: 700 !important;
+            display: inline-block !important;
         }}
 
         /* 3. Sidebar Styling */
@@ -323,20 +355,39 @@ def inject_custom_theme(theme_mode: str = "light"):
             border: 1px solid {expander_border} !important;
             border-radius: 14px !important;
             margin-bottom: 0.75rem !important;
+            box-shadow: {card_shadow} !important;
+            overflow: hidden !important;
         }}
         div[data-testid="stExpander"] details {{
             background-color: {expander_bg} !important;
             border-radius: 14px !important;
         }}
         div[data-testid="stExpander"] summary {{
-            color: {text_primary} !important;
-            font-weight: 600 !important;
+            background-color: {expander_header_bg} !important;
+            color: {expander_header_text} !important;
+            font-weight: 700 !important;
+            padding: 12px 18px !important;
+            border-bottom: 1px solid {expander_border} !important;
+            border-radius: 14px 14px 0 0 !important;
+        }}
+        div[data-testid="stExpander"] summary:hover {{
+            color: {accent_color} !important;
         }}
         div[data-testid="stExpander"] summary p,
-        div[data-testid="stExpander"] summary span {{
-            color: {text_primary} !important;
+        div[data-testid="stExpander"] summary span,
+        div[data-testid="stExpander"] summary * {{
+            color: {expander_header_text} !important;
+            font-weight: 700 !important;
         }}
-        div[data-testid="stExpander"] [data-testid="stExpanderDetails"] * {{
+        div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
+            background-color: {expander_bg} !important;
+            padding: 18px !important;
+            border-radius: 0 0 14px 14px !important;
+        }}
+        div[data-testid="stExpander"] [data-testid="stExpanderDetails"] p,
+        div[data-testid="stExpander"] [data-testid="stExpanderDetails"] span,
+        div[data-testid="stExpander"] [data-testid="stExpanderDetails"] strong,
+        div[data-testid="stExpander"] [data-testid="stExpanderDetails"] div {{
             color: {text_primary} !important;
         }}
 
@@ -406,7 +457,7 @@ def inject_custom_theme(theme_mode: str = "light"):
             font-weight: 800 !important;
             color: {text_primary} !important;
             margin-top: 4px !important;
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }}
         .metric-sub {{
             font-size: 0.78rem !important;
@@ -438,28 +489,104 @@ def inject_custom_theme(theme_mode: str = "light"):
             color: #ffffff !important;
             border-radius: 20px !important;
             padding: 26px !important;
-            border: 1px solid rgba(45, 212, 191, 0.25) !important;
+            border: 1px solid rgba(45, 212, 191, 0.35) !important;
             box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.35) !important;
         }}
-        .finding-card * {{
+        .finding-card, 
+        .finding-card *, 
+        .finding-card strong, 
+        .finding-card span, 
+        .finding-card p, 
+        .finding-card div {{
             color: #ffffff !important;
         }}
-        .finding-title {{
+        .finding-card .finding-title {{
             font-size: 0.8rem !important;
             text-transform: uppercase !important;
             font-weight: 700 !important;
             color: #2dd4bf !important;
             letter-spacing: 0.06em !important;
         }}
-        .finding-class {{
-            font-size: 2.1rem !important;
+        .finding-card .finding-class {{
+            font-size: 1.85rem !important;
             font-weight: 800 !important;
             color: #ffffff !important;
-            margin: 6px 0 !important;
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            margin: 8px 0 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            line-height: 1.25 !important;
+        }}
+        .finding-card .finding-code {{
+            font-size: 0.95rem !important;
+            color: #2dd4bf !important;
+            margin-bottom: 12px !important;
+            font-weight: 600 !important;
+        }}
+        .finding-card .finding-code strong {{
+            color: #2dd4bf !important;
+        }}
+        .finding-card .finding-risk {{
+            margin-top: 10px !important;
+            font-size: 0.9rem !important;
+            color: #f1f5f9 !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+            padding-top: 10px !important;
+        }}
+        .finding-card .finding-risk strong {{
+            color: #ffffff !important;
         }}
 
-        /* 12. Badges */
+        /* 12. Step Pill Badge */
+        .step-pill {{
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            background: {pill_bg} !important;
+            border: 1px solid {pill_border} !important;
+            border-radius: 9999px !important;
+            padding: 6px 16px !important;
+            font-weight: 700 !important;
+            font-size: 0.92rem !important;
+            color: {pill_text} !important;
+            margin-bottom: 12px !important;
+            box-shadow: 0 2px 8px rgba(13, 148, 136, 0.08) !important;
+        }}
+        .step-pill, .step-pill span, .step-pill div, .step-pill p {{
+            color: {pill_text} !important;
+        }}
+        .step-number {{
+            background: {accent_color} !important;
+            color: #ffffff !important;
+            font-size: 0.75rem !important;
+            font-weight: 800 !important;
+            padding: 3px 9px !important;
+            border-radius: 9999px !important;
+            display: inline-block !important;
+            line-height: 1 !important;
+        }}
+
+        /* 13. Diagnostic Hierarchy Checklist Cards */
+        .diff-card {{
+            background: {bg_card} !important;
+            border: 1px solid {card_border} !important;
+            border-radius: 12px !important;
+            padding: 10px 14px !important;
+            margin-bottom: 8px !important;
+            font-size: 0.92rem !important;
+            transition: all 0.2s ease !important;
+        }}
+        .diff-card.active {{
+            background: { "rgba(45, 212, 191, 0.12)" if theme_mode == "dark" else "rgba(13, 148, 136, 0.08)" } !important;
+            border: 2px solid {accent_color} !important;
+            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.15) !important;
+        }}
+        .diff-card, .diff-card p, .diff-card span, .diff-card div {{
+            color: {text_primary} !important;
+        }}
+        .diff-card.active, .diff-card.active p, .diff-card.active span, .diff-card.active div {{
+            color: {text_primary} !important;
+        }}
+
+        /* 14. Badges */
         .badge-good {{
             background: #ecfdf5 !important;
             color: #065f46 !important;
@@ -498,28 +625,44 @@ def inject_custom_theme(theme_mode: str = "light"):
 def load_cached_models():
     """
     Loads trained models for high-precision ensemble inference.
+    Defensively checks multiple relative and absolute path locations.
     """
     models = {}
     
+    def find_model_file(paths_to_check):
+        for p in paths_to_check:
+            if not p:
+                continue
+            if os.path.exists(p):
+                return p
+            p_root = str(ROOT_DIR / p)
+            if os.path.exists(p_root):
+                return p_root
+        return None
+    
     # ResNet50
-    p_resnet = PRIMARY_CANDIDATE_MODEL_PATH
-    if not os.path.exists(p_resnet): p_resnet = "models/resnet/resnet_v1.keras"
-    if os.path.exists(p_resnet):
-        try: models["resnet50"] = tf.keras.models.load_model(p_resnet)
-        except Exception: pass
+    resnet_path = find_model_file([PRIMARY_CANDIDATE_MODEL_PATH, "models/resnet50_opmd.keras", "models/resnet/resnet_v1.keras"])
+    if resnet_path:
+        try:
+            models["resnet50"] = tf.keras.models.load_model(resnet_path)
+        except Exception:
+            pass
 
     # MobileNetV2
-    p_mob = MOBILENET_MODEL_PATH
-    if not os.path.exists(p_mob): p_mob = "models/mobilenet/mobilenet_v1.keras"
-    if os.path.exists(p_mob):
-        try: models["mobilenetv2"] = tf.keras.models.load_model(p_mob)
-        except Exception: pass
+    mob_path = find_model_file([MOBILENET_MODEL_PATH, "models/mobilenetv2_opmd.keras", "models/mobilenet/mobilenet_v1.keras"])
+    if mob_path:
+        try:
+            models["mobilenetv2"] = tf.keras.models.load_model(mob_path)
+        except Exception:
+            pass
 
     # VGG16
-    p_vgg = VGG16_MODEL_PATH
-    if os.path.exists(p_vgg):
-        try: models["vgg16"] = tf.keras.models.load_model(p_vgg)
-        except Exception: pass
+    vgg_path = find_model_file([VGG16_MODEL_PATH, "models/vgg16_opmd.keras"])
+    if vgg_path:
+        try:
+            models["vgg16"] = tf.keras.models.load_model(vgg_path)
+        except Exception:
+            pass
 
     return models
 
@@ -591,7 +734,8 @@ def get_image_hash(pil_image: Image.Image) -> str:
     """Computes MD5 hash for image caching to prevent repeated neural inference."""
     import io, hashlib
     with io.BytesIO() as buf:
-        pil_image.save(buf, format="JPEG")
+        rgb_img = pil_image.convert("RGB")
+        rgb_img.save(buf, format="PNG")
         return hashlib.md5(buf.getvalue()).hexdigest()
 
 
@@ -599,8 +743,14 @@ def get_image_hash(pil_image: Image.Image) -> str:
 # 4. SYSTEM STATUS BAR & SIDEBAR THEME CONTROLLER
 # ==============================================================================
 
+def set_theme(new_theme: str):
+    st.session_state["theme"] = new_theme
+
+def toggle_theme():
+    st.session_state["theme"] = "dark" if st.session_state.get("theme") == "light" else "light"
+
 def render_top_system_bar(user: dict = None):
-    cur_theme = st.session_state["theme"]
+    cur_theme = st.session_state.get("theme", "light")
     col_sb1, col_sb2 = st.columns([3, 1])
     with col_sb1:
         st.markdown(f"""
@@ -615,21 +765,30 @@ def render_top_system_bar(user: dict = None):
         """, unsafe_allow_html=True)
     with col_sb2:
         btn_label = "🌙 Dark Theme" if cur_theme == "light" else "☀️ Light Theme"
-        if st.button(btn_label, key="top_bar_theme_toggle", use_container_width=True):
-            st.session_state["theme"] = "dark" if cur_theme == "light" else "light"
-            st.rerun()
+        st.button(btn_label, key="top_bar_theme_toggle", use_container_width=True, on_click=toggle_theme)
 
 def render_sidebar_theme_toggle():
     st.sidebar.markdown("### 🎨 Interface Theme")
+    cur_theme = st.session_state.get("theme", "light")
     theme_col1, theme_col2 = st.sidebar.columns(2)
     with theme_col1:
-        if st.button("☀️ Light", use_container_width=True, type="primary" if st.session_state["theme"] == "light" else "secondary", key="sb_btn_light"):
-            st.session_state["theme"] = "light"
-            st.rerun()
+        st.button(
+            "☀️ Light",
+            use_container_width=True,
+            type="primary" if cur_theme == "light" else "secondary",
+            key="sb_btn_light",
+            on_click=set_theme,
+            args=("light",)
+        )
     with theme_col2:
-        if st.button("🌙 Dark", use_container_width=True, type="primary" if st.session_state["theme"] == "dark" else "secondary", key="sb_btn_dark"):
-            st.session_state["theme"] = "dark"
-            st.rerun()
+        st.button(
+            "🌙 Dark",
+            use_container_width=True,
+            type="primary" if cur_theme == "dark" else "secondary",
+            key="sb_btn_dark",
+            on_click=set_theme,
+            args=("dark",)
+        )
     st.sidebar.markdown("---")
 
 # ==============================================================================
@@ -881,8 +1040,9 @@ def render_7step_analysis_flow(user: dict, role_mode: str = "doctor"):
     </div>
     """, unsafe_allow_html=True)
 
-    # Check Cache or Run Inference
-    if img_hash not in st.session_state["analysis_cache"]:
+    # Check Cache or Run Inference (defensive cache access)
+    cache = st.session_state.setdefault("analysis_cache", {})
+    if img_hash not in cache:
         with st.spinner("Analyzing mucosal patterns across deep CNN ensemble & generating Grad-CAM heatmaps..."):
             res = run_high_precision_inference(input_pil_image, model_choice=model_selection)
             st.session_state["analysis_cache"][img_hash] = res
@@ -895,15 +1055,17 @@ def render_7step_analysis_flow(user: dict, role_mode: str = "doctor"):
     col_res1, col_res2 = st.columns([1.2, 1], gap="large")
 
     with col_res1:
+        disp_finding = CLASS_DISPLAY_NAMES.get(predicted_lesion, predicted_lesion)
+        risk_text = RISK_TIERS.get(predicted_lesion, 'Requires Specialist Review')
         st.markdown(f"""
         <div class="finding-card">
             <div class="finding-title">AI-Assisted Diagnostic Identification</div>
-            <div class="finding-class">{CLASS_DISPLAY_NAMES.get(predicted_lesion, predicted_lesion)}</div>
-            <div style="font-size: 0.95rem; color: #2dd4bf; margin-bottom: 12px; font-weight: 600;">
-                Clinical Nomenclature Code: <strong>{predicted_lesion}</strong>
+            <div class="finding-class">{disp_finding}</div>
+            <div class="finding-code">
+                Clinical Nomenclature Code: <strong style="color: #2dd4bf; font-family: monospace; font-size: 1.05rem;">{predicted_lesion}</strong>
             </div>
-            <div style="margin-top: 10px; font-size: 0.88rem; color: #e2e8f0; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 10px;">
-                <strong>Clinical Risk Stratification:</strong> {RISK_TIERS.get(predicted_lesion, 'Requires Specialist Review')}
+            <div class="finding-risk">
+                <strong style="color: #ffffff;">Clinical Risk Stratification:</strong> <span style="color: #f1f5f9; font-weight: 500;">{risk_text}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -916,19 +1078,25 @@ def render_7step_analysis_flow(user: dict, role_mode: str = "doctor"):
         st.markdown("##### 🏷️ Diagnostic Hierarchy Checklist")
         for l_code in CLASS_NAMES:
             is_match = (l_code == predicted_lesion)
-            display_str = f"**{CLASS_DISPLAY_NAMES.get(l_code, l_code)}** (`{l_code}`)"
+            disp_name = CLASS_DISPLAY_NAMES.get(l_code, l_code)
             
             if is_match:
                 st.markdown(f"""
                 <div class="diff-card active">
-                    <span style="color: #0d9488; font-weight: 800;">👉 IDENTIFIED FINDING:</span><br>
-                    {display_str}
+                    <div style="font-weight: 800; font-size: 0.78rem; text-transform: uppercase; color: #0d9488; margin-bottom: 4px; letter-spacing: 0.04em;">
+                        👉 IDENTIFIED CLINICAL FINDING
+                    </div>
+                    <div style="font-weight: 700; font-size: 0.95rem;">
+                        <span>{disp_name}</span> <code style="background: rgba(13,148,136,0.15); color: #0d9488; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.85rem;">{l_code}</code>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div class="diff-card">
-                    <span style="color: #64748b;">• {display_str}</span>
+                    <div style="font-weight: 500; font-size: 0.9rem; opacity: 0.85;">
+                        • {disp_name} <span style="opacity: 0.7; font-family: monospace; font-size: 0.82rem;">({l_code})</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
 
