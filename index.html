@@ -2,17 +2,42 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>lesionXpert | AI-Assisted Identification of Oral Potentially Malignant Disorders on Clinical Photographs</title>
-    <meta name="description" content="lesionXpert: AI-Assisted Identification of Oral Potentially Malignant Disorders on Clinical Photographs using deep learning trained on the HRruiH oral mucosal diseases dataset." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>LesionXpert.AI | AI-Assisted Oral Lesion Identification & Triage</title>
+    <meta name="description" content="LesionXpert.AI: Clinical mobile and desktop decision-support for AI-Assisted Identification of Oral Potentially Malignant Disorders." />
+    
+    <!-- PWA & Mobile Phone App Capabilities -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0d9488" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="LesionXpert" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   </head>
-  <body class="bg-[#F8FAFC] text-[#0b1c30] antialiased selection:bg-[#0D9488] selection:text-white font-['Manrope']">
+  <body class="bg-[#F8FAFC] text-[#0b1c30] antialiased selection:bg-[#0D9488] selection:text-white font-['Manrope'] overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register PWA Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then((registration) => {
+              console.log('[LesionXpert.AI PWA] Service Worker registered:', registration.scope);
+            })
+            .catch((error) => {
+              console.warn('[LesionXpert.AI PWA] Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
 

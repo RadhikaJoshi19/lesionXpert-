@@ -161,17 +161,30 @@ def inject_custom_theme(theme_mode: str = "light"):
         pill_border = "rgba(13, 148, 136, 0.25)"
 
     st.markdown(f"""
+    <!-- Mobile PWA Meta Headers -->
+    <head>
+        <link rel="manifest" href="/manifest.json">
+        <meta name="theme-color" content="{accent_color}">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="LesionXpert">
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    </head>
     <style>
-        /* 1. Global Baseline & App Container */
+        /* 1. Global Baseline & Mobile Responsive App Container */
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
             background-color: {bg_main} !important;
             color: {text_primary} !important;
+            -webkit-tap-highlight-color: transparent !important;
         }}
 
         .main .block-container {{
-            padding-top: 1.25rem !important;
-            padding-bottom: 3rem !important;
+            padding-top: max(1rem, env(safe-area-inset-top)) !important;
+            padding-bottom: max(2.5rem, env(safe-area-inset-bottom)) !important;
+            padding-left: max(0.75rem, env(safe-area-inset-left)) !important;
+            padding-right: max(0.75rem, env(safe-area-inset-right)) !important;
             max-width: 1350px !important;
         }}
 
@@ -613,6 +626,38 @@ def inject_custom_theme(theme_mode: str = "light"):
             border-radius: 9999px;
             font-weight: 700;
             font-size: 0.75rem;
+        }}
+
+        /* 15. Mobile Phone Responsive Layout & Safe Areas */
+        @media (max-width: 768px) {{
+            .main .block-container {{
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+                padding-top: 10px !important;
+            }}
+            .finding-card {{
+                padding: 18px !important;
+                border-radius: 16px !important;
+            }}
+            .finding-card .finding-class {{
+                font-size: 1.45rem !important;
+            }}
+            .metric-card {{
+                padding: 16px !important;
+                margin-bottom: 10px !important;
+                border-radius: 14px !important;
+            }}
+            .metric-value {{
+                font-size: 1.5rem !important;
+            }}
+            .system-statusbar {{
+                font-size: 0.78rem !important;
+                padding: 8px 12px !important;
+            }}
+            div.stButton > button {{
+                min-height: 44px !important;
+                font-size: 0.92rem !important;
+            }}
         }}
     </style>
     """, unsafe_allow_html=True)

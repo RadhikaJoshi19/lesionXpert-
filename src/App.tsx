@@ -22,6 +22,7 @@ import { ClinicalReviewsView } from './components/ClinicalReviewsView';
 import { StudyResourcesView } from './components/StudyResourcesView';
 import { SettingsView } from './components/SettingsView';
 import { ReportModal } from './components/ReportModal';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 export function App() {
   // Navigation & Authentication State
@@ -316,6 +317,9 @@ export function App() {
       {currentView !== 'signin' && currentView !== 'signup' && (
         <Footer />
       )}
+
+      {/* PWA Mobile App Install Prompt */}
+      <PWAInstallPrompt />
 
     </div>
   );
